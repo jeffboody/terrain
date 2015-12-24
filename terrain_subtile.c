@@ -133,8 +133,7 @@ void terrain_subtile_delete(terrain_subtile_t** _self)
 }
 
 terrain_subtile_t* terrain_subtile_import(const char* base,
-                                          int x, int y, int zoom,
-                                          int i, int j)
+                                          int xx, int yy, int zoom)
 {
 	assert(base);
 
@@ -148,9 +147,7 @@ terrain_subtile_t* terrain_subtile_import(const char* base,
 
 	char fname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.texz",
-	         base, self->zoom,
-	         TERRAIN_SUBTILE_COUNT*self->x + self->j,
-	         TERRAIN_SUBTILE_COUNT*self->y + self->i);
+	         base, zoom, xx, yy);
 	fname[255] = '\0';
 
 	texgz_tex_t* tex = texgz_tex_importz(fname);
@@ -180,11 +177,11 @@ terrain_subtile_t* terrain_subtile_import(const char* base,
 		goto fail_param;
 	}
 
-	self->x    = x;
-	self->y    = y;
+	self->x    = xx/TERRAIN_SUBTILE_COUNT;
+	self->y    = yy/TERRAIN_SUBTILE_COUNT;
 	self->zoom = zoom;
-	self->i    = i;
-	self->j    = j;
+	self->i    = yy % TERRAIN_SUBTILE_COUNT;
+	self->j    = xx % TERRAIN_SUBTILE_COUNT;
 
 	// success
 	return self;

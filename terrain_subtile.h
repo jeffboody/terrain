@@ -69,8 +69,7 @@ terrain_subtile_t* terrain_subtile_new(int x, int y, int zoom,
                                        int i, int j);
 void               terrain_subtile_delete(terrain_subtile_t** _self);
 terrain_subtile_t* terrain_subtile_import(const char* base,
-                                          int x, int y, int zoom,
-                                          int i, int j);
+                                          int xx, int yy, int zoom);
 terrain_subtile_t* terrain_subtile_importf(FILE* f, int size,
                                           int x, int y, int zoom,
                                           int i, int j);
