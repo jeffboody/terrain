@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
 #include "terrain/terrain_subtile.h"
 #include "terrain/terrain_util.h"
 #include "texgz/texgz_tex.h"
@@ -97,7 +98,7 @@ static void sample_subtile03(terrain_subtile_t* ter,
 	short h = terrain_subtile_get(next,
 	                              TERRAIN_SAMPLE_COUNT - 3,
 	                              2);
-	terrain_subtile_set(ter, -1, 258, h);
+	terrain_subtile_set(ter, -1, 257, h);
 }
 
 static void sample_subtile10(terrain_subtile_t* ter,
@@ -140,8 +141,9 @@ static void sample_subtile11(terrain_subtile_t* ter,
 			short h = terrain_subtile_get(next,
 			                              mm,
 			                              nn);
-			terrain_subtile_set(ter, m++, n++, h);
+			terrain_subtile_set(ter, m, n++, h);
 		}
+		++m;
 		n = 0;
 	}
 }
@@ -166,8 +168,9 @@ static void sample_subtile12(terrain_subtile_t* ter,
 			short h = terrain_subtile_get(next,
 			                              mm,
 			                              nn);
-			terrain_subtile_set(ter, m++, n++, h);
+			terrain_subtile_set(ter, m, n++, h);
 		}
+		++m;
 		n = 128;
 	}
 }
@@ -188,7 +191,7 @@ static void sample_subtile13(terrain_subtile_t* ter,
 		short h = terrain_subtile_get(next,
 		                              mm,
 		                              2);
-		terrain_subtile_set(ter, m++, 258, h);
+		terrain_subtile_set(ter, m++, 257, h);
 	}
 }
 
@@ -232,8 +235,9 @@ static void sample_subtile21(terrain_subtile_t* ter,
 			short h = terrain_subtile_get(next,
 			                              mm,
 			                              nn);
-			terrain_subtile_set(ter, m++, n++, h);
+			terrain_subtile_set(ter, m, n++, h);
 		}
+		++m;
 		n = 0;
 	}
 }
@@ -258,8 +262,9 @@ static void sample_subtile22(terrain_subtile_t* ter,
 			short h = terrain_subtile_get(next,
 			                              mm,
 			                              nn);
-			terrain_subtile_set(ter, m++, n++, h);
+			terrain_subtile_set(ter, m, n++, h);
 		}
+		++m;
 		n = 128;
 	}
 }
@@ -280,7 +285,7 @@ static void sample_subtile23(terrain_subtile_t* ter,
 		short h = terrain_subtile_get(next,
 		                              mm,
 		                              2);
-		terrain_subtile_set(ter, m++, 258, h);
+		terrain_subtile_set(ter, m++, 257, h);
 	}
 }
 
@@ -296,7 +301,7 @@ static void sample_subtile30(terrain_subtile_t* ter,
 	short h = terrain_subtile_get(next,
 	                              2,
 	                              TERRAIN_SAMPLE_COUNT - 3);
-	terrain_subtile_set(ter, 258, -1, h);
+	terrain_subtile_set(ter, 257, -1, h);
 }
 
 static void sample_subtile31(terrain_subtile_t* ter,
@@ -315,7 +320,7 @@ static void sample_subtile31(terrain_subtile_t* ter,
 		short h = terrain_subtile_get(next,
 		                              2,
 		                              nn);
-		terrain_subtile_set(ter, 258, n++, h);
+		terrain_subtile_set(ter, 257, n++, h);
 	}
 }
 
@@ -335,7 +340,7 @@ static void sample_subtile32(terrain_subtile_t* ter,
 		short h = terrain_subtile_get(next,
 		                              2,
 		                              nn);
-		terrain_subtile_set(ter, 258, n++, h);
+		terrain_subtile_set(ter, 257, n++, h);
 	}
 }
 
@@ -351,7 +356,7 @@ static void sample_subtile33(terrain_subtile_t* ter,
 	short h = terrain_subtile_get(next,
 	                              2,
 	                              2);
-	terrain_subtile_set(ter, 258, 258, h);
+	terrain_subtile_set(ter, 257, 257, h);
 }
 
 static void sample_subtile(int x, int y, int zoom, int i, int j)
@@ -364,11 +369,28 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 	int r;
 	int c;
 	int done = 1;
-	terrain_subtile_t* next[16];
+	terrain_subtile_t* next[16] =
+	{
+		NULL, NULL, NULL, NULL,
+		NULL, NULL, NULL, NULL,
+		NULL, NULL, NULL, NULL,
+		NULL, NULL, NULL, NULL,
+	};
 	for(r = 0; r < 4; ++r)
 	{
 		for(c = 0; c < 4; ++c)
 		{
+			char fname[256];
+			snprintf(fname, 256, "./terrain/%i/%i/%i.texz",
+			         zz, xx + c - 1, yy + r - 1);
+			fname[255] = '\0';
+
+			if(access(fname, F_OK) != 0)
+			{
+				// fname may not exist
+				continue;
+			}
+
 			int idx = 4*r + c;
 			next[idx] = terrain_subtile_import(".",
 			                                   xx + c - 1,
