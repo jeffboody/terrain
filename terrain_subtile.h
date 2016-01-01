@@ -43,20 +43,48 @@
 #define TERRAIN_BORDER_SIZE     1
 #define TERRAIN_NODATA          0
 
+/*
+ * flags for next LOD existance
+ */
+#define TERRAIN_NEXT_TL  0X1
+#define TERRAIN_NEXT_BL  0X2
+#define TERRAIN_NEXT_TR  0X4
+#define TERRAIN_NEXT_BR  0X8
+#define TERRAIN_NEXT_ALL 0XF
+
+/*
+ * header uncompressed consists of:
+ * int magic
+ * int min  (cast to short)
+ * int max  (cast to short)
+ * int next (cast to char)
+ */
+#define TERRAIN_MAGIC 0x7EBB00D9
+#define TERRAIN_HSIZE 16
+
 typedef struct
 {
-	// tile
+	// tile address
 	int x;
 	int y;
 	int zoom;
 
-	// subtile
 	struct
 	{
-		char  i;
-		char  j;
-		short pad;
+		// subtile address
+		char i;
+		char j;
+
+		// next LOD existance
+		char next;
+
+		// padding for 4-byte alignment
+		char pad;
 	};
+
+	// min/max altitude for the subtile
+	short min;
+	short max;
 
 	// tex is stored as SHORT+LUMINANCE
 	// data units are measured in feet because the highest
@@ -83,5 +111,13 @@ void               terrain_subtile_set(terrain_subtile_t* self,
                                        short h);
 short              terrain_subtile_get(terrain_subtile_t* self,
                                        int m, int n);
+void               terrain_subtile_exists(terrain_subtile_t* self,
+                                          char next);
+int                terrain_subtile_tl(terrain_subtile_t* self);
+int                terrain_subtile_bl(terrain_subtile_t* self);
+int                terrain_subtile_tr(terrain_subtile_t* self);
+int                terrain_subtile_br(terrain_subtile_t* self);
+short              terrain_subtile_min(terrain_subtile_t* self);
+short              terrain_subtile_max(terrain_subtile_t* self);
 
 #endif

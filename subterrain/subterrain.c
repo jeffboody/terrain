@@ -129,6 +129,8 @@ static void sample_subtile11(terrain_subtile_t* ter,
 		return;
 	}
 
+	terrain_subtile_exists(ter, TERRAIN_NEXT_TL);
+
 	// center border samples
 	int mm;
 	int nn;
@@ -155,6 +157,8 @@ static void sample_subtile12(terrain_subtile_t* ter,
 	{
 		return;
 	}
+
+	terrain_subtile_exists(ter, TERRAIN_NEXT_TR);
 
 	// center border samples
 	int mm;
@@ -223,6 +227,8 @@ static void sample_subtile21(terrain_subtile_t* ter,
 		return;
 	}
 
+	terrain_subtile_exists(ter, TERRAIN_NEXT_BL);
+
 	// center border samples
 	int mm;
 	int nn;
@@ -249,6 +255,8 @@ static void sample_subtile22(terrain_subtile_t* ter,
 	{
 		return;
 	}
+
+	terrain_subtile_exists(ter, TERRAIN_NEXT_BR);
 
 	// center border samples
 	int mm;
@@ -381,7 +389,7 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 		for(c = 0; c < 4; ++c)
 		{
 			char fname[256];
-			snprintf(fname, 256, "./terrain/%i/%i/%i.texz",
+			snprintf(fname, 256, "./terrain/%i/%i/%i.terrain",
 			         zz, xx + c - 1, yy + r - 1);
 			fname[255] = '\0';
 
