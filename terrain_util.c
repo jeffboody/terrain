@@ -58,7 +58,7 @@ void  terrain_subtile2coord(int x, int y, int zoom,
 	LOGD("debug x=%i, y=%i, zoom=%i, i=%i, j=%i, m=%i, n=%i",
 	     x, y, zoom, i, j, m, n);
 
-	float s  = (float) TERRAIN_SAMPLE_COUNT;
+	float s  = (float) TERRAIN_SAMPLES_SUBTILE;
 	float c  = (float) TERRAIN_SUBTILE_COUNT;
 	float xx = (float) x;
 	float yy = (float) y;

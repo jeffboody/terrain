@@ -93,7 +93,7 @@ terrain_subtile_t* terrain_subtile_new(int x, int y, int zoom,
 		return NULL;
 	}
 
-	int samples = TERRAIN_SAMPLE_COUNT + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
 	self->tex = texgz_tex_new(samples, samples,
 	                          samples, samples,
 	                          TEXGZ_SHORT,
@@ -158,7 +158,7 @@ terrain_subtile_t* terrain_subtile_import(const char* base,
 	self->tex = tex;
 
 	// verify tex parameters
-	int samples = TERRAIN_SAMPLE_COUNT + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
 	if((tex->width   == samples) &&
 	   (tex->height  == samples) &&
 	   (tex->stride  == samples) &&
@@ -216,7 +216,7 @@ terrain_subtile_t* terrain_subtile_importf(FILE* f, int size,
 	self->tex = tex;
 
 	// verify tex parameters
-	int samples = TERRAIN_SAMPLE_COUNT + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
 	if((tex->width   == samples) &&
 	   (tex->height  == samples) &&
 	   (tex->stride  == samples) &&
@@ -297,7 +297,7 @@ void terrain_subtile_set(terrain_subtile_t* self,
 	m += TERRAIN_BORDER_SIZE;
 	n += TERRAIN_BORDER_SIZE;
 
-	int samples = TERRAIN_SAMPLE_COUNT + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
 	if((m < 0) || (m >= samples) ||
 	   (n < 0) || (n >= samples))
 	{
@@ -320,7 +320,7 @@ short terrain_subtile_get(terrain_subtile_t* self,
 	m += TERRAIN_BORDER_SIZE;
 	n += TERRAIN_BORDER_SIZE;
 
-	int samples = TERRAIN_SAMPLE_COUNT + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
 	if((m < 0) || (m >= samples) ||
 	   (n < 0) || (n >= samples))
 	{

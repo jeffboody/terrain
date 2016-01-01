@@ -38,10 +38,10 @@
  * for hill/relief shading. The sample count does not
  * include the border.
  */
-#define TERRAIN_SUBTILE_COUNT 8
-#define TERRAIN_SAMPLE_COUNT  257
-#define TERRAIN_BORDER_SIZE   1
-#define TERRAIN_NODATA        0
+#define TERRAIN_SUBTILE_COUNT   8
+#define TERRAIN_SAMPLES_SUBTILE 257
+#define TERRAIN_BORDER_SIZE     1
+#define TERRAIN_NODATA          0
 
 typedef struct
 {

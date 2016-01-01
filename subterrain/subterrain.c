@@ -41,8 +41,8 @@ static void sample_subtile00(terrain_subtile_t* ter,
 
 	// top-left border sample
 	short h = terrain_subtile_get(next,
-	                              TERRAIN_SAMPLE_COUNT - 3,
-	                              TERRAIN_SAMPLE_COUNT - 3);
+	                              TERRAIN_SAMPLES_SUBTILE - 3,
+	                              TERRAIN_SAMPLES_SUBTILE - 3);
 	terrain_subtile_set(ter, -1, -1, h);
 }
 
@@ -57,10 +57,10 @@ static void sample_subtile01(terrain_subtile_t* ter,
 	// top border samples
 	int nn;
 	int n = 0;
-	for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
 		short h = terrain_subtile_get(next,
-		                              TERRAIN_SAMPLE_COUNT - 3,
+		                              TERRAIN_SAMPLES_SUBTILE - 3,
 		                              nn);
 		terrain_subtile_set(ter, -1, n++, h);
 	}
@@ -77,10 +77,10 @@ static void sample_subtile02(terrain_subtile_t* ter,
 	// top border samples
 	int nn;
 	int n = 128;
-	for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
 		short h = terrain_subtile_get(next,
-		                              TERRAIN_SAMPLE_COUNT - 3,
+		                              TERRAIN_SAMPLES_SUBTILE - 3,
 		                              nn);
 		terrain_subtile_set(ter, -1, n++, h);
 	}
@@ -96,7 +96,7 @@ static void sample_subtile03(terrain_subtile_t* ter,
 
 	// top-right border sample
 	short h = terrain_subtile_get(next,
-	                              TERRAIN_SAMPLE_COUNT - 3,
+	                              TERRAIN_SAMPLES_SUBTILE - 3,
 	                              2);
 	terrain_subtile_set(ter, -1, 257, h);
 }
@@ -112,11 +112,11 @@ static void sample_subtile10(terrain_subtile_t* ter,
 	// left border samples
 	int mm;
 	int m = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
 		short h = terrain_subtile_get(next,
 		                              mm,
-		                              TERRAIN_SAMPLE_COUNT - 3);
+		                              TERRAIN_SAMPLES_SUBTILE - 3);
 		terrain_subtile_set(ter, m++, -1, h);
 	}
 }
@@ -134,9 +134,9 @@ static void sample_subtile11(terrain_subtile_t* ter,
 	int nn;
 	int m = 0;
 	int n = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
 			short h = terrain_subtile_get(next,
 			                              mm,
@@ -161,9 +161,9 @@ static void sample_subtile12(terrain_subtile_t* ter,
 	int nn;
 	int m = 0;
 	int n = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
 			short h = terrain_subtile_get(next,
 			                              mm,
@@ -186,7 +186,7 @@ static void sample_subtile13(terrain_subtile_t* ter,
 	// right border samples
 	int mm;
 	int m = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
 		short h = terrain_subtile_get(next,
 		                              mm,
@@ -206,11 +206,11 @@ static void sample_subtile20(terrain_subtile_t* ter,
 	// left border samples
 	int mm;
 	int m = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
 		short h = terrain_subtile_get(next,
 		                              mm,
-		                              TERRAIN_SAMPLE_COUNT - 3);
+		                              TERRAIN_SAMPLES_SUBTILE - 3);
 		terrain_subtile_set(ter, m++, -1, h);
 	}
 }
@@ -228,9 +228,9 @@ static void sample_subtile21(terrain_subtile_t* ter,
 	int nn;
 	int m = 128;
 	int n = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
 			short h = terrain_subtile_get(next,
 			                              mm,
@@ -255,9 +255,9 @@ static void sample_subtile22(terrain_subtile_t* ter,
 	int nn;
 	int m = 128;
 	int n = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
 			short h = terrain_subtile_get(next,
 			                              mm,
@@ -280,7 +280,7 @@ static void sample_subtile23(terrain_subtile_t* ter,
 	// right border samples
 	int mm;
 	int m = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLE_COUNT; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
 		short h = terrain_subtile_get(next,
 		                              mm,
@@ -300,7 +300,7 @@ static void sample_subtile30(terrain_subtile_t* ter,
 	// bottom-left border sample
 	short h = terrain_subtile_get(next,
 	                              2,
-	                              TERRAIN_SAMPLE_COUNT - 3);
+	                              TERRAIN_SAMPLES_SUBTILE - 3);
 	terrain_subtile_set(ter, 257, -1, h);
 }
 
@@ -315,7 +315,7 @@ static void sample_subtile31(terrain_subtile_t* ter,
 	// bottom border samples
 	int nn;
 	int n = 0;
-	for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
 		short h = terrain_subtile_get(next,
 		                              2,
@@ -335,7 +335,7 @@ static void sample_subtile32(terrain_subtile_t* ter,
 	// bottom border samples
 	int nn;
 	int n = 128;
-	for(nn = 0; nn < TERRAIN_SAMPLE_COUNT; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
 		short h = terrain_subtile_get(next,
 		                              2,

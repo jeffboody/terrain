@@ -52,7 +52,7 @@ static void sample_subtile(terrain_subtile_t* ter)
 	int m;
 	int n;
 	int min = -TERRAIN_BORDER_SIZE;
-	int max = TERRAIN_SAMPLE_COUNT + TERRAIN_BORDER_SIZE;
+	int max = TERRAIN_SAMPLES_SUBTILE + TERRAIN_BORDER_SIZE;
 	for(m = min; m < max; ++m)
 	{
 		for(n = min; n < max; ++n)
