@@ -44,10 +44,16 @@ static flt_tile_t* flt_bl = NULL;
 static flt_tile_t* flt_bc = NULL;
 static flt_tile_t* flt_br = NULL;
 
-static void sample_subtile(terrain_tile_t* ter)
+static int sample_tile(int x, int y, int zoom)
 {
-	assert(ter);
 	LOGD("debug");
+
+	terrain_tile_t* ter;
+	ter = terrain_tile_new(x, y, zoom);
+	if(ter == NULL)
+	{
+		return 0;
+	}
 
 	int m;
 	int n;
@@ -62,7 +68,7 @@ static void sample_subtile(terrain_tile_t* ter)
 			terrain_tile_coord(ter, m, n, &lat, &lon);
 
 			// flt_cc most likely place to find sample
-			// At edges of range a subtile may not be
+			// At edges of range a tile may not be
 			// fully covered by flt_xx
 			short h;
 			if((flt_cc && flt_tile_sample(flt_cc, lat, lon, &h)) ||
@@ -79,36 +85,13 @@ static void sample_subtile(terrain_tile_t* ter)
 			}
 		}
 	}
-}
 
-static int sample_tile(int x, int y, int zoom)
-{
-	LOGD("debug x=%i, y=%i, zoom=%i", x, y, zoom);
-
-	// sample subtiles i,j
-	int i;
-	int j;
-	terrain_tile_t* ter = NULL;
-	for(i = 0; i < TERRAIN_SUBTILE_COUNT; ++i)
+	if(terrain_tile_export(ter, ".") == 0)
 	{
-		for(j = 0; j < TERRAIN_SUBTILE_COUNT; ++j)
-		{
-			ter = terrain_tile_new(x, y, zoom, i, j);
-			if(ter == NULL)
-			{
-				return 0;
-			}
-
-			sample_subtile(ter);
-
-			if(terrain_tile_export(ter, ".") == 0)
-			{
-				goto fail_export;
-			}
-
-			terrain_tile_delete(&ter);
-		}
+		goto fail_export;
 	}
+
+	terrain_tile_delete(&ter);
 
 	// success
 	return 1;
@@ -241,6 +224,25 @@ int main(int argc, char** argv)
 				if((y0f - floor(y0f)) == 0.0f)
 				{
 					y0 = (int) y0f;
+				}
+
+				// check the tile range
+				int range = (int) pow(2.0, (double) zoom);
+				if(x0 < 0)
+				{
+					x0 = 0;
+				}
+				if(y0 < 0)
+				{
+					y0 = 0;
+				}
+				if(x1 >= range)
+				{
+					x1 = range - 1;
+				}
+				if(y1 >= range)
+				{
+					y1 = range - 1;
 				}
 
 				// sample the set of tiles whose origin should cover flt_cc

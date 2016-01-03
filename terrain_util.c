@@ -37,8 +37,8 @@ void  terrain_tile2coord(float x, float y, int zoom,
 	assert(lon);
 	LOGD("debug x=%f, y=%f, zoom=%i", x, y, zoom);
 
-	double worldu  = TERRAIN_SUBTILE_COUNT*x/pow(2.0, (double) zoom);
-	double worldv  = TERRAIN_SUBTILE_COUNT*y/pow(2.0, (double) zoom);
+	double worldu  = x/pow(2.0, (double) zoom);
+	double worldv  = y/pow(2.0, (double) zoom);
 	double cartx   = 2.0*M_PI*worldu;
 	double carty   = 2.0*M_PI*worldv;
 	double mercx   = cartx - M_PI;
@@ -49,25 +49,22 @@ void  terrain_tile2coord(float x, float y, int zoom,
 	*lon           = rad_lon/(M_PI/180.0);
 }
 
-void  terrain_subtile2coord(int x, int y, int zoom,
-                            int i, int j, int m, int n,
-                            double* lat, double* lon)
+void  terrain_sample2coord(int x, int y, int zoom,
+                           int m, int n,
+                           double* lat, double* lon)
 {
 	assert(lat);
 	assert(lon);
-	LOGD("debug x=%i, y=%i, zoom=%i, i=%i, j=%i, m=%i, n=%i",
-	     x, y, zoom, i, j, m, n);
+	LOGD("debug x=%i, y=%i, zoom=%i, m=%i, n=%i",
+	     x, y, zoom, m, n);
 
 	float s  = (float) TERRAIN_SAMPLES_SUBTILE;
-	float c  = (float) TERRAIN_SUBTILE_COUNT;
 	float xx = (float) x;
 	float yy = (float) y;
-	float jj = (float) j;
-	float ii = (float) i;
 	float nn = (float) n/(s - 1.0f);
 	float mm = (float) m/(s - 1.0f);
 
-	terrain_tile2coord(xx + (jj + nn)/c, yy + (ii + mm)/c,
+	terrain_tile2coord(xx + nn, yy + mm,
 	                   zoom, lat, lon);
 }
 
@@ -86,8 +83,8 @@ void  terrain_coord2tile(double lat, double lon, int zoom,
 	double carty   = M_PI - mercy;
 	double worldu  = cartx/(2.0*M_PI);
 	double worldv  = carty/(2.0*M_PI);
-	*x             = (float) worldu*pow(2.0, (double) zoom)/TERRAIN_SUBTILE_COUNT;
-	*y             = (float) worldv*pow(2.0, (double) zoom)/TERRAIN_SUBTILE_COUNT;
+	*x             = (float) worldu*pow(2.0, (double) zoom);
+	*y             = (float) worldv*pow(2.0, (double) zoom);
 }
 
 void terrain_coord2xy(double lat, double lon,

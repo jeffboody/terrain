@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <math.h>
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 #include "texgz/texgz_tex.h"
@@ -31,8 +32,8 @@
 #define LOG_TAG "subterrain"
 #include "terrain/terrain_log.h"
 
-static void sample_subtile00(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod00(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -46,8 +47,8 @@ static void sample_subtile00(terrain_tile_t* ter,
 	terrain_tile_set(ter, -1, -1, h);
 }
 
-static void sample_subtile01(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod01(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -66,8 +67,8 @@ static void sample_subtile01(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile02(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod02(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -86,8 +87,8 @@ static void sample_subtile02(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile03(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod03(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -101,8 +102,8 @@ static void sample_subtile03(terrain_tile_t* ter,
 	terrain_tile_set(ter, -1, 257, h);
 }
 
-static void sample_subtile10(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod10(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -120,14 +121,18 @@ static void sample_subtile10(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile11(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod11(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
+		terrain_tile_adjustMinMax(ter, 0, 0);
 		return;
 	}
 
+	short min = terrain_tile_min(next);
+	short max = terrain_tile_max(next);
+	terrain_tile_adjustMinMax(ter, min, max);
 	terrain_tile_exists(ter, TERRAIN_NEXT_TL);
 
 	// center border samples
@@ -147,14 +152,18 @@ static void sample_subtile11(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile12(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod12(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
+		terrain_tile_adjustMinMax(ter, 0, 0);
 		return;
 	}
 
+	short min = terrain_tile_min(next);
+	short max = terrain_tile_max(next);
+	terrain_tile_adjustMinMax(ter, min, max);
 	terrain_tile_exists(ter, TERRAIN_NEXT_TR);
 
 	// center border samples
@@ -174,8 +183,8 @@ static void sample_subtile12(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile13(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod13(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -192,8 +201,8 @@ static void sample_subtile13(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile20(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod20(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -211,14 +220,18 @@ static void sample_subtile20(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile21(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod21(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
+		terrain_tile_adjustMinMax(ter, 0, 0);
 		return;
 	}
 
+	short min = terrain_tile_min(next);
+	short max = terrain_tile_max(next);
+	terrain_tile_adjustMinMax(ter, min, max);
 	terrain_tile_exists(ter, TERRAIN_NEXT_BL);
 
 	// center border samples
@@ -238,14 +251,18 @@ static void sample_subtile21(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile22(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod22(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
+		terrain_tile_adjustMinMax(ter, 0, 0);
 		return;
 	}
 
+	short min = terrain_tile_min(next);
+	short max = terrain_tile_max(next);
+	terrain_tile_adjustMinMax(ter, min, max);
 	terrain_tile_exists(ter, TERRAIN_NEXT_BR);
 
 	// center border samples
@@ -265,8 +282,8 @@ static void sample_subtile22(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile23(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod23(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -283,8 +300,8 @@ static void sample_subtile23(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile30(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod30(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -297,8 +314,8 @@ static void sample_subtile30(terrain_tile_t* ter,
 	terrain_tile_set(ter, 257, -1, h);
 }
 
-static void sample_subtile31(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod31(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -315,8 +332,8 @@ static void sample_subtile31(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile32(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod32(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -333,8 +350,8 @@ static void sample_subtile32(terrain_tile_t* ter,
 	}
 }
 
-static void sample_subtile33(terrain_tile_t* ter,
-                             terrain_tile_t* next)
+static void sample_lod33(terrain_tile_t* ter,
+                         terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -346,13 +363,13 @@ static void sample_subtile33(terrain_tile_t* ter,
 	terrain_tile_set(ter, 257, 257, h);
 }
 
-static void sample_subtile(int x, int y, int zoom, int i, int j)
+static void sample_tile(int x, int y, int zoom)
 {
-	int xx = 2*(TERRAIN_SUBTILE_COUNT*x + j);
-	int yy = 2*(TERRAIN_SUBTILE_COUNT*y + i);
+	int xx = 2*x;
+	int yy = 2*y;
 	int zz = zoom + 1;
 
-	// load the surrounding subtiles in the next zoom level
+	// load the surrounding tiles in the next zoom level
 	int r;
 	int c;
 	int done = 1;
@@ -395,37 +412,37 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 		return;
 	}
 
-	terrain_tile_t* ter = terrain_tile_new(x, y, zoom, i, j);
+	terrain_tile_t* ter = terrain_tile_new(x, y, zoom);
 	if(ter == NULL)
 	{
 		goto fail_ter;
 	}
 
-	// sample the next subtiles
-	sample_subtile00(ter, next[0]);
-	sample_subtile01(ter, next[1]);
-	sample_subtile02(ter, next[2]);
-	sample_subtile03(ter, next[3]);
-	sample_subtile10(ter, next[4]);
-	sample_subtile11(ter, next[5]);
-	sample_subtile12(ter, next[6]);
-	sample_subtile13(ter, next[7]);
-	sample_subtile20(ter, next[8]);
-	sample_subtile21(ter, next[9]);
-	sample_subtile22(ter, next[10]);
-	sample_subtile23(ter, next[11]);
-	sample_subtile30(ter, next[12]);
-	sample_subtile31(ter, next[13]);
-	sample_subtile32(ter, next[14]);
-	sample_subtile33(ter, next[15]);
+	// sample the next lods
+	sample_lod00(ter, next[0]);
+	sample_lod01(ter, next[1]);
+	sample_lod02(ter, next[2]);
+	sample_lod03(ter, next[3]);
+	sample_lod10(ter, next[4]);
+	sample_lod11(ter, next[5]);
+	sample_lod12(ter, next[6]);
+	sample_lod13(ter, next[7]);
+	sample_lod20(ter, next[8]);
+	sample_lod21(ter, next[9]);
+	sample_lod22(ter, next[10]);
+	sample_lod23(ter, next[11]);
+	sample_lod30(ter, next[12]);
+	sample_lod31(ter, next[13]);
+	sample_lod32(ter, next[14]);
+	sample_lod33(ter, next[15]);
 
-	// export this subtile
+	// export this lod
 	if(terrain_tile_export(ter, ".") == 0)
 	{
 		goto fail_export;
 	}
 
-	// delete the subtiles
+	// delete the lod tiles
 	int idx;
 	for(idx = 0; idx < 16; ++idx)
 	{
@@ -444,19 +461,6 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 		for(idx = 0; idx < 16; ++idx)
 		{
 			free(next[idx]);
-		}
-	}
-}
-
-static void sample_tile(int x, int y, int zoom)
-{
-	int i;
-	int j;
-	for(i = 0; i < TERRAIN_SUBTILE_COUNT; ++i)
-	{
-		for(j = 0; j < TERRAIN_SUBTILE_COUNT; ++j)
-		{
-			sample_subtile(x, y, zoom, i, j);
 		}
 	}
 }
@@ -513,6 +517,25 @@ int main(int argc, char** argv)
 	int y0 = (int) y0f;
 	int x1 = (int) (x1f + 1.0f);
 	int y1 = (int) (y1f + 1.0f);
+
+	// check the tile range
+	int range = (int) pow(2.0, (double) zoom);
+	if(x0 < 0)
+	{
+		x0 = 0;
+	}
+	if(y0 < 0)
+	{
+		y0 = 0;
+	}
+	if(x1 >= range)
+	{
+		x1 = range - 1;
+	}
+	if(y1 >= range)
+	{
+		y1 = range - 1;
+	}
 
 	// sample the set of tiles whose origin should cover range
 	// again, due to overlap with other flt tiles the sampling

@@ -26,9 +26,9 @@
 
 void  terrain_tile2coord(float x, float y, int zoom,
                          double* lat, double* lon);
-void  terrain_subtile2coord(int x, int y, int zoom,
-                            int i, int j, int m, int n,
-                            double* lat, double* lon);
+void  terrain_sample2coord(int x, int y, int zoom,
+                           int m, int n,
+                           double* lat, double* lon);
 void  terrain_coord2tile(double lat, double lon, int zoom,
                          float* x, float* y);
 void  terrain_coord2xy(double lat, double lon,

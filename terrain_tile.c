@@ -78,15 +78,22 @@ static int terrain_mkdir(const char* fname)
 	return 1;
 }
 
-static void terrain_tile_minmax(terrain_tile_t* self)
+static void terrain_tile_updateMinMax(terrain_tile_t* self)
 {
 	assert(self);
+
+	// check if the min/max has already been set
+	if((self->min != TERRAIN_HEIGHT_MAX) &&
+	   (self->max != TERRAIN_HEIGHT_MIN))
+	{
+		return;
+	}
 
 	int   m;
 	int   n;
 	short h;
-	short min = 32767;
-	short max = -32768;
+	short min = TERRAIN_HEIGHT_MAX;
+	short max = TERRAIN_HEIGHT_MIN;
 	for(m = 0; m < TERRAIN_SAMPLES_SUBTILE; ++m)
 	{
 		for(n = 0; n < TERRAIN_SAMPLES_SUBTILE; ++n)
@@ -154,8 +161,7 @@ static int swapendian(int i)
 * public                                                   *
 ***********************************************************/
 
-terrain_tile_t* terrain_tile_new(int x, int y, int zoom,
-                                 int i, int j)
+terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 {
 	terrain_tile_t* self = (terrain_tile_t*)
 	                       malloc(sizeof(terrain_tile_t));
@@ -179,14 +185,11 @@ terrain_tile_t* terrain_tile_new(int x, int y, int zoom,
 	self->x    = x;
 	self->y    = y;
 	self->zoom = zoom;
-	self->i    = i;
-	self->j    = j;
 	self->next = 0;
-	self->pad  = 0;
 
-	// updated on export
-	self->min = 0;
-	self->max = 0;
+	// updated on export if not set
+	self->min = TERRAIN_HEIGHT_MAX;
+	self->max = TERRAIN_HEIGHT_MIN;
 
 	// success
 	return self;
@@ -211,13 +214,13 @@ void terrain_tile_delete(terrain_tile_t** _self)
 }
 
 terrain_tile_t* terrain_tile_import(const char* base,
-                                    int xx, int yy, int zoom)
+                                    int x, int y, int zoom)
 {
 	assert(base);
 
 	char fname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
-	         base, zoom, xx, yy);
+	         base, zoom, x, y);
 	fname[255] = '\0';
 
 	FILE* f = fopen(fname, "r");
@@ -232,14 +235,8 @@ terrain_tile_t* terrain_tile_import(const char* base,
 	int size = (int) ftell(f);
 	rewind(f);
 
-	int x = xx/TERRAIN_SUBTILE_COUNT;
-	int y = yy/TERRAIN_SUBTILE_COUNT;
-	int i = yy % TERRAIN_SUBTILE_COUNT;
-	int j = xx % TERRAIN_SUBTILE_COUNT;
-
 	terrain_tile_t* self;
-	self = terrain_tile_importf(f, size, x, y,
-	                            zoom, i, j);
+	self = terrain_tile_importf(f, size, x, y, zoom);
 	if(self == NULL)
 	{
 		goto fail_import;
@@ -257,8 +254,7 @@ terrain_tile_t* terrain_tile_import(const char* base,
 }
 
 terrain_tile_t* terrain_tile_importf(FILE* f, int size,
-                                     int x, int y, int zoom,
-                                     int i, int j)
+                                     int x, int y, int zoom)
 {
 	assert(f);
 
@@ -284,13 +280,13 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	if(magic == TERRAIN_MAGIC)
 	{
 		self->min  = (short) readintle(buffer, 4);
-		self->min  = (short) readintle(buffer, 8);
+		self->max  = (short) readintle(buffer, 8);
 		self->next = (char)  readintle(buffer, 12);
 	}
 	else if(swapendian(magic) == TERRAIN_MAGIC)
 	{
 		self->min  = (short) readintbe(buffer, 4);
-		self->min  = (short) readintbe(buffer, 8);
+		self->max  = (short) readintbe(buffer, 8);
 		self->next = (char)  readintbe(buffer, 12);
 	}
 
@@ -326,8 +322,6 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	self->x    = x;
 	self->y    = y;
 	self->zoom = zoom;
-	self->i    = i;
-	self->j    = j;
 
 	// success
 	return self;
@@ -349,9 +343,7 @@ int terrain_tile_export(terrain_tile_t* self,
 
 	char fname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
-	         base, self->zoom,
-	         TERRAIN_SUBTILE_COUNT*self->x + self->j,
-	         TERRAIN_SUBTILE_COUNT*self->y + self->i);
+	         base, self->zoom, self->x, self->y);
 	fname[255] = '\0';
 
 	if(terrain_mkdir(fname) == 0)
@@ -375,7 +367,7 @@ int terrain_tile_export(terrain_tile_t* self,
 	}
 
 	// update min/max sample heights
-	terrain_tile_minmax(self);
+	terrain_tile_updateMinMax(self);
 
 	int min = (int) self->min;
 	if(fwrite(&min, sizeof(int), 1, f) != 1)
@@ -425,9 +417,8 @@ void terrain_tile_coord(terrain_tile_t* self,
 	assert(lat);
 	assert(lon);
 
-	terrain_subtile2coord(self->x, self->y, self->zoom,
-	                      self->i, self->j, m, n,
-	                      lat, lon);
+	terrain_sample2coord(self->x, self->y, self->zoom,
+	                     m, n, lat, lon);
 }
 
 void terrain_tile_set(terrain_tile_t* self,
@@ -477,22 +468,43 @@ short terrain_tile_get(terrain_tile_t* self,
 	return pixels[idx];
 }
 
-void terrain_tile_getij(terrain_tile_t* self,
-                        int i, int j, short* data)
+void terrain_tile_getBlock(terrain_tile_t* self,
+                           int blocks, int r, int c,
+                           short* data)
 {
 	assert(self);
 	assert(data);
+	assert(((TERRAIN_SAMPLES_SUBTILE - 1) % blocks) == 0);
 
 	int m;
 	int n;
-	for(m = 0; m < 33; ++m)
+	int step = (TERRAIN_SAMPLES_SUBTILE - 1)/blocks;
+	int size = step + 1;
+	for(m = 0; m < size; ++m)
 	{
-		for(n = 0; n < 33; ++n)
+		for(n = 0; n < size; ++n)
 		{
-			int mm = 32*i + m;
-			int nn = 32*j + n;
-			data[33*m + n] = terrain_tile_get(self, mm, nn);
+			int mm = step*r + m;
+			int nn = step*c + n;
+			data[size*m + n] = terrain_tile_get(self,
+			                                    mm, nn);
 		}
+	}
+}
+
+void terrain_tile_adjustMinMax(terrain_tile_t* self,
+                               short min, short max)
+{
+	assert(self);
+
+	if(min < self->min)
+	{
+		self->min = min;
+	}
+
+	if(max > self->max)
+	{
+		self->max = max;
 	}
 }
 

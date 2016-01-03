@@ -27,9 +27,7 @@
 #include "../texgz/texgz_tex.h"
 
 /*
- * A terrain tile is a array of 8x8 subtiles.
- *
- * There are 257x257 samples to ensure that the subtile
+ * There are 257x257 samples to ensure that the tile
  * can be subdivided evenly for multiple LOD. e.g. 257
  * samples means 256 segments. The range of m,n is 0..256
  * for samples and -1..257 including the border.
@@ -38,7 +36,6 @@
  * for hill/relief shading. The sample count does not
  * include the border.
  */
-#define TERRAIN_SUBTILE_COUNT   8
 #define TERRAIN_SAMPLES_SUBTILE 257
 #define TERRAIN_BORDER_SIZE     1
 #define TERRAIN_NODATA          0
@@ -51,6 +48,12 @@
 #define TERRAIN_NEXT_TR  0X4
 #define TERRAIN_NEXT_BR  0X8
 #define TERRAIN_NEXT_ALL 0XF
+
+/*
+ * range of shorts
+ */
+#define TERRAIN_HEIGHT_MIN -32768
+#define TERRAIN_HEIGHT_MAX 32767
 
 /*
  * header uncompressed consists of:
@@ -69,38 +72,26 @@ typedef struct
 	int y;
 	int zoom;
 
-	struct
-	{
-		// subtile address
-		char i;
-		char j;
-
-		// next LOD existance
-		char next;
-
-		// padding for 4-byte alignment
-		char pad;
-	};
-
-	// min/max altitude for the subtile
-	short min;
-	short max;
-
 	// tex is stored as SHORT+LUMINANCE
 	// data units are measured in feet because the highest
 	// point, Mt Everest is 29029 feet,  which matches up
 	// nicely with range of shorts (-32768 to 32767)
 	texgz_tex_t* tex;
+
+	// min/max altitude for the tile
+	short min;
+	short max;
+
+	// next LOD existance
+	char next;
 } terrain_tile_t;
 
-terrain_tile_t* terrain_tile_new(int x, int y, int zoom,
-                                 int i, int j);
+terrain_tile_t* terrain_tile_new(int x, int y, int zoom);
 void            terrain_tile_delete(terrain_tile_t** _self);
 terrain_tile_t* terrain_tile_import(const char* base,
-                                    int xx, int yy, int zoom);
+                                    int x, int y, int zoom);
 terrain_tile_t* terrain_tile_importf(FILE* f, int size,
-                                     int x, int y, int zoom,
-                                     int i, int j);
+                                     int x, int y, int zoom);
 int             terrain_tile_export(terrain_tile_t* self,
                                     const char* base);
 void            terrain_tile_coord(terrain_tile_t* self,
@@ -111,8 +102,12 @@ void            terrain_tile_set(terrain_tile_t* self,
                                  short h);
 short           terrain_tile_get(terrain_tile_t* self,
                                  int m, int n);
-void            terrain_tile_getij(terrain_tile_t* self,
-                                   int i, int j, short* data);
+void            terrain_tile_getBlock(terrain_tile_t* self,
+                                      int blocks,
+                                      int r, int c,
+                                      short* data);
+void            terrain_tile_adjustMinMax(terrain_tile_t* self,
+                                          short min, short max);
 void            terrain_tile_exists(terrain_tile_t* self,
                                     char next);
 int             terrain_tile_tl(terrain_tile_t* self);
