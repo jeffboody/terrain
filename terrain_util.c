@@ -24,7 +24,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
-#include "terrain_subtile.h"
+#include "terrain_tile.h"
 #include "terrain_util.h"
 
 #define LOG_TAG "terrain"
@@ -88,6 +88,23 @@ void  terrain_coord2tile(double lat, double lon, int zoom,
 	double worldv  = carty/(2.0*M_PI);
 	*x             = (float) worldu*pow(2.0, (double) zoom)/TERRAIN_SUBTILE_COUNT;
 	*y             = (float) worldv*pow(2.0, (double) zoom)/TERRAIN_SUBTILE_COUNT;
+}
+
+void terrain_coord2xy(double lat, double lon,
+                      float* x, float* y)
+{
+	assert(x);
+	assert(y);
+	LOGD("debug lat=%lf, lon=%lf", lat, lon);
+
+	// use home as the origin
+	double lat2meter = 111072.12110934;
+	double lon2meter = 85337.868965619;
+	double home_lat  = 40.061295;
+	double home_lon  =-105.214552;
+
+	*x = (float) ((lon - home_lon)*lon2meter);
+	*y = (float) ((lat - home_lat)*lat2meter);
 }
 
 float terrain_m2ft(float m)

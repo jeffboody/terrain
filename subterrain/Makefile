@@ -26,6 +26,6 @@ clean:
 	rm -f $(OBJECTS) *~ \#*\# $(TARGET)
 	$(MAKE) -C terrain clean
 	$(MAKE) -C texgz clean
-	rm terraintexgz
+	rm terrain texgz
 
 $(OBJECTS): $(HFILES)

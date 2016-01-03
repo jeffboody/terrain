@@ -31,6 +31,8 @@ void  terrain_subtile2coord(int x, int y, int zoom,
                             double* lat, double* lon);
 void  terrain_coord2tile(double lat, double lon, int zoom,
                          float* x, float* y);
+void  terrain_coord2xy(double lat, double lon,
+                       float* x, float* y);
 float terrain_m2ft(float m);
 float terrain_ft2m(float f);
 

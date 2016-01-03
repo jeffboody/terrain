@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef terrain_subtile_H
-#define terrain_subtile_H
+#ifndef terrain_tile_H
+#define terrain_tile_H
 
 #include "../texgz/texgz_tex.h"
 
@@ -91,33 +91,35 @@ typedef struct
 	// point, Mt Everest is 29029 feet,  which matches up
 	// nicely with range of shorts (-32768 to 32767)
 	texgz_tex_t* tex;
-} terrain_subtile_t;
+} terrain_tile_t;
 
-terrain_subtile_t* terrain_subtile_new(int x, int y, int zoom,
-                                       int i, int j);
-void               terrain_subtile_delete(terrain_subtile_t** _self);
-terrain_subtile_t* terrain_subtile_import(const char* base,
-                                          int xx, int yy, int zoom);
-terrain_subtile_t* terrain_subtile_importf(FILE* f, int size,
-                                          int x, int y, int zoom,
-                                          int i, int j);
-int                terrain_subtile_export(terrain_subtile_t* self,
-                                          const char* base);
-void               terrain_subtile_coord(terrain_subtile_t* self,
-                                         int m, int n,
-                                         double* lat, double* lon);
-void               terrain_subtile_set(terrain_subtile_t* self,
-                                       int m, int n,
-                                       short h);
-short              terrain_subtile_get(terrain_subtile_t* self,
-                                       int m, int n);
-void               terrain_subtile_exists(terrain_subtile_t* self,
-                                          char next);
-int                terrain_subtile_tl(terrain_subtile_t* self);
-int                terrain_subtile_bl(terrain_subtile_t* self);
-int                terrain_subtile_tr(terrain_subtile_t* self);
-int                terrain_subtile_br(terrain_subtile_t* self);
-short              terrain_subtile_min(terrain_subtile_t* self);
-short              terrain_subtile_max(terrain_subtile_t* self);
+terrain_tile_t* terrain_tile_new(int x, int y, int zoom,
+                                 int i, int j);
+void            terrain_tile_delete(terrain_tile_t** _self);
+terrain_tile_t* terrain_tile_import(const char* base,
+                                    int xx, int yy, int zoom);
+terrain_tile_t* terrain_tile_importf(FILE* f, int size,
+                                     int x, int y, int zoom,
+                                     int i, int j);
+int             terrain_tile_export(terrain_tile_t* self,
+                                    const char* base);
+void            terrain_tile_coord(terrain_tile_t* self,
+                                   int m, int n,
+                                   double* lat, double* lon);
+void            terrain_tile_set(terrain_tile_t* self,
+                                 int m, int n,
+                                 short h);
+short           terrain_tile_get(terrain_tile_t* self,
+                                 int m, int n);
+void            terrain_tile_getij(terrain_tile_t* self,
+                                   int i, int j, short* data);
+void            terrain_tile_exists(terrain_tile_t* self,
+                                    char next);
+int             terrain_tile_tl(terrain_tile_t* self);
+int             terrain_tile_bl(terrain_tile_t* self);
+int             terrain_tile_tr(terrain_tile_t* self);
+int             terrain_tile_br(terrain_tile_t* self);
+short           terrain_tile_min(terrain_tile_t* self);
+short           terrain_tile_max(terrain_tile_t* self);
 
 #endif

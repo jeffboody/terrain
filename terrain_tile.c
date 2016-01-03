@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
-#include "terrain_subtile.h"
+#include "terrain_tile.h"
 #include "terrain_util.h"
 
 #define LOG_TAG "terrain"
@@ -78,7 +78,7 @@ static int terrain_mkdir(const char* fname)
 	return 1;
 }
 
-static void terrain_subtile_minmax(terrain_subtile_t* self)
+static void terrain_tile_minmax(terrain_tile_t* self)
 {
 	assert(self);
 
@@ -91,7 +91,7 @@ static void terrain_subtile_minmax(terrain_subtile_t* self)
 	{
 		for(n = 0; n < TERRAIN_SAMPLES_SUBTILE; ++n)
 		{
-			h = terrain_subtile_get(self, m, n);
+			h = terrain_tile_get(self, m, n);
 			if(h < min)
 			{
 				min = h;
@@ -154,11 +154,11 @@ static int swapendian(int i)
 * public                                                   *
 ***********************************************************/
 
-terrain_subtile_t* terrain_subtile_new(int x, int y, int zoom,
-                                       int i, int j)
+terrain_tile_t* terrain_tile_new(int x, int y, int zoom,
+                                 int i, int j)
 {
-	terrain_subtile_t* self = (terrain_subtile_t*)
-	                          malloc(sizeof(terrain_subtile_t));
+	terrain_tile_t* self = (terrain_tile_t*)
+	                       malloc(sizeof(terrain_tile_t));
 	if(self == NULL)
 	{
 		LOGE("malloc failed");
@@ -197,11 +197,11 @@ terrain_subtile_t* terrain_subtile_new(int x, int y, int zoom,
 	return NULL;
 }
 
-void terrain_subtile_delete(terrain_subtile_t** _self)
+void terrain_tile_delete(terrain_tile_t** _self)
 {
 	assert(_self);
 
-	terrain_subtile_t* self = *_self;
+	terrain_tile_t* self = *_self;
 	if(self)
 	{
 		texgz_tex_delete(&self->tex);
@@ -210,8 +210,8 @@ void terrain_subtile_delete(terrain_subtile_t** _self)
 	}
 }
 
-terrain_subtile_t* terrain_subtile_import(const char* base,
-                                          int xx, int yy, int zoom)
+terrain_tile_t* terrain_tile_import(const char* base,
+                                    int xx, int yy, int zoom)
 {
 	assert(base);
 
@@ -237,9 +237,9 @@ terrain_subtile_t* terrain_subtile_import(const char* base,
 	int i = yy % TERRAIN_SUBTILE_COUNT;
 	int j = xx % TERRAIN_SUBTILE_COUNT;
 
-	terrain_subtile_t* self;
-	self = terrain_subtile_importf(f, size, x, y,
-	                               zoom, i, j);
+	terrain_tile_t* self;
+	self = terrain_tile_importf(f, size, x, y,
+	                            zoom, i, j);
 	if(self == NULL)
 	{
 		goto fail_import;
@@ -256,14 +256,14 @@ terrain_subtile_t* terrain_subtile_import(const char* base,
 	return NULL;
 }
 
-terrain_subtile_t* terrain_subtile_importf(FILE* f, int size,
-                                          int x, int y, int zoom,
-                                          int i, int j)
+terrain_tile_t* terrain_tile_importf(FILE* f, int size,
+                                     int x, int y, int zoom,
+                                     int i, int j)
 {
 	assert(f);
 
-	terrain_subtile_t* self = (terrain_subtile_t*)
-	                          malloc(sizeof(terrain_subtile_t));
+	terrain_tile_t* self = (terrain_tile_t*)
+	                       malloc(sizeof(terrain_tile_t));
 	if(self == NULL)
 	{
 		LOGE("malloc failed");
@@ -341,8 +341,8 @@ terrain_subtile_t* terrain_subtile_importf(FILE* f, int size,
 	return NULL;
 }
 
-int terrain_subtile_export(terrain_subtile_t* self,
-                           const char* base)
+int terrain_tile_export(terrain_tile_t* self,
+                        const char* base)
 {
 	assert(self);
 	assert(base);
@@ -375,7 +375,7 @@ int terrain_subtile_export(terrain_subtile_t* self,
 	}
 
 	// update min/max sample heights
-	terrain_subtile_minmax(self);
+	terrain_tile_minmax(self);
 
 	int min = (int) self->min;
 	if(fwrite(&min, sizeof(int), 1, f) != 1)
@@ -417,18 +417,22 @@ int terrain_subtile_export(terrain_subtile_t* self,
 	return 0;
 }
 
-void terrain_subtile_coord(terrain_subtile_t* self,
-                           int m, int n,
-                           double* lat, double* lon)
+void terrain_tile_coord(terrain_tile_t* self,
+                        int m, int n,
+                        double* lat, double* lon)
 {
+	assert(self);
+	assert(lat);
+	assert(lon);
+
 	terrain_subtile2coord(self->x, self->y, self->zoom,
 	                      self->i, self->j, m, n,
 	                      lat, lon);
 }
 
-void terrain_subtile_set(terrain_subtile_t* self,
-                         int m, int n,
-                         short h)
+void terrain_tile_set(terrain_tile_t* self,
+                      int m, int n,
+                      short h)
 {
 	assert(self);
 
@@ -450,8 +454,8 @@ void terrain_subtile_set(terrain_subtile_t* self,
 	pixels[idx] = h;
 }
 
-short terrain_subtile_get(terrain_subtile_t* self,
-                          int m, int n)
+short terrain_tile_get(terrain_tile_t* self,
+                       int m, int n)
 {
 	assert(self);
 
@@ -473,50 +477,69 @@ short terrain_subtile_get(terrain_subtile_t* self,
 	return pixels[idx];
 }
 
-void terrain_subtile_exists(terrain_subtile_t* self,
-                            char next)
+void terrain_tile_getij(terrain_tile_t* self,
+                        int i, int j, short* data)
+{
+	assert(self);
+	assert(data);
+
+	int m;
+	int n;
+	for(m = 0; m < 33; ++m)
+	{
+		for(n = 0; n < 33; ++n)
+		{
+			int mm = 32*i + m;
+			int nn = 32*j + n;
+			data[33*m + n] = terrain_tile_get(self, mm, nn);
+		}
+	}
+}
+
+void terrain_tile_exists(terrain_tile_t* self,
+                         char next)
 {
 	assert(self);
 
 	self->next |= next;
 }
 
-int terrain_subtile_tl(terrain_subtile_t* self)
+int terrain_tile_tl(terrain_tile_t* self)
 {
 	assert(self);
 
 	return self->next & TERRAIN_NEXT_TL;
 }
 
-int terrain_subtile_bl(terrain_subtile_t* self)
+int terrain_tile_bl(terrain_tile_t* self)
 {
 	assert(self);
 
 	return self->next & TERRAIN_NEXT_BL;
 }
 
-int terrain_subtile_tr(terrain_subtile_t* self)
+int terrain_tile_tr(terrain_tile_t* self)
 {
 	assert(self);
 
 	return self->next & TERRAIN_NEXT_TR;
 }
 
-int terrain_subtile_br(terrain_subtile_t* self)
+int terrain_tile_br(terrain_tile_t* self)
 {
 	assert(self);
 
 	return self->next & TERRAIN_NEXT_BR;
 }
 
-short terrain_subtile_min(terrain_subtile_t* self)
+short terrain_tile_min(terrain_tile_t* self)
 {
 	assert(self);
 
 	return self->min;
 }
 
-short terrain_subtile_max(terrain_subtile_t* self)
+short terrain_tile_max(terrain_tile_t* self)
 {
 	assert(self);
 

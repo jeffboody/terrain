@@ -24,15 +24,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
-#include "terrain/terrain_subtile.h"
+#include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 #include "texgz/texgz_tex.h"
 
 #define LOG_TAG "subterrain"
 #include "terrain/terrain_log.h"
 
-static void sample_subtile00(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile00(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -40,14 +40,14 @@ static void sample_subtile00(terrain_subtile_t* ter,
 	}
 
 	// top-left border sample
-	short h = terrain_subtile_get(next,
-	                              TERRAIN_SAMPLES_SUBTILE - 3,
-	                              TERRAIN_SAMPLES_SUBTILE - 3);
-	terrain_subtile_set(ter, -1, -1, h);
+	short h = terrain_tile_get(next,
+	                           TERRAIN_SAMPLES_SUBTILE - 3,
+	                           TERRAIN_SAMPLES_SUBTILE - 3);
+	terrain_tile_set(ter, -1, -1, h);
 }
 
-static void sample_subtile01(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile01(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -59,15 +59,15 @@ static void sample_subtile01(terrain_subtile_t* ter,
 	int n = 0;
 	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              TERRAIN_SAMPLES_SUBTILE - 3,
-		                              nn);
-		terrain_subtile_set(ter, -1, n++, h);
+		short h = terrain_tile_get(next,
+		                           TERRAIN_SAMPLES_SUBTILE - 3,
+		                           nn);
+		terrain_tile_set(ter, -1, n++, h);
 	}
 }
 
-static void sample_subtile02(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile02(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -79,15 +79,15 @@ static void sample_subtile02(terrain_subtile_t* ter,
 	int n = 128;
 	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              TERRAIN_SAMPLES_SUBTILE - 3,
-		                              nn);
-		terrain_subtile_set(ter, -1, n++, h);
+		short h = terrain_tile_get(next,
+		                           TERRAIN_SAMPLES_SUBTILE - 3,
+		                           nn);
+		terrain_tile_set(ter, -1, n++, h);
 	}
 }
 
-static void sample_subtile03(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile03(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -95,14 +95,14 @@ static void sample_subtile03(terrain_subtile_t* ter,
 	}
 
 	// top-right border sample
-	short h = terrain_subtile_get(next,
-	                              TERRAIN_SAMPLES_SUBTILE - 3,
-	                              2);
-	terrain_subtile_set(ter, -1, 257, h);
+	short h = terrain_tile_get(next,
+	                           TERRAIN_SAMPLES_SUBTILE - 3,
+	                           2);
+	terrain_tile_set(ter, -1, 257, h);
 }
 
-static void sample_subtile10(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile10(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -114,22 +114,21 @@ static void sample_subtile10(terrain_subtile_t* ter,
 	int m = 0;
 	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              mm,
-		                              TERRAIN_SAMPLES_SUBTILE - 3);
-		terrain_subtile_set(ter, m++, -1, h);
+		short h = terrain_tile_get(next, mm,
+		                           TERRAIN_SAMPLES_SUBTILE - 3);
+		terrain_tile_set(ter, m++, -1, h);
 	}
 }
 
-static void sample_subtile11(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile11(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
 		return;
 	}
 
-	terrain_subtile_exists(ter, TERRAIN_NEXT_TL);
+	terrain_tile_exists(ter, TERRAIN_NEXT_TL);
 
 	// center border samples
 	int mm;
@@ -140,25 +139,23 @@ static void sample_subtile11(terrain_subtile_t* ter,
 	{
 		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
-			short h = terrain_subtile_get(next,
-			                              mm,
-			                              nn);
-			terrain_subtile_set(ter, m, n++, h);
+			short h = terrain_tile_get(next, mm, nn);
+			terrain_tile_set(ter, m, n++, h);
 		}
 		++m;
 		n = 0;
 	}
 }
 
-static void sample_subtile12(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile12(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
 		return;
 	}
 
-	terrain_subtile_exists(ter, TERRAIN_NEXT_TR);
+	terrain_tile_exists(ter, TERRAIN_NEXT_TR);
 
 	// center border samples
 	int mm;
@@ -169,18 +166,16 @@ static void sample_subtile12(terrain_subtile_t* ter,
 	{
 		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
-			short h = terrain_subtile_get(next,
-			                              mm,
-			                              nn);
-			terrain_subtile_set(ter, m, n++, h);
+			short h = terrain_tile_get(next, mm, nn);
+			terrain_tile_set(ter, m, n++, h);
 		}
 		++m;
 		n = 128;
 	}
 }
 
-static void sample_subtile13(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile13(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -192,15 +187,13 @@ static void sample_subtile13(terrain_subtile_t* ter,
 	int m = 0;
 	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              mm,
-		                              2);
-		terrain_subtile_set(ter, m++, 257, h);
+		short h = terrain_tile_get(next, mm, 2);
+		terrain_tile_set(ter, m++, 257, h);
 	}
 }
 
-static void sample_subtile20(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile20(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -212,22 +205,21 @@ static void sample_subtile20(terrain_subtile_t* ter,
 	int m = 128;
 	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              mm,
-		                              TERRAIN_SAMPLES_SUBTILE - 3);
-		terrain_subtile_set(ter, m++, -1, h);
+		short h = terrain_tile_get(next, mm,
+		                           TERRAIN_SAMPLES_SUBTILE - 3);
+		terrain_tile_set(ter, m++, -1, h);
 	}
 }
 
-static void sample_subtile21(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile21(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
 		return;
 	}
 
-	terrain_subtile_exists(ter, TERRAIN_NEXT_BL);
+	terrain_tile_exists(ter, TERRAIN_NEXT_BL);
 
 	// center border samples
 	int mm;
@@ -238,25 +230,23 @@ static void sample_subtile21(terrain_subtile_t* ter,
 	{
 		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
-			short h = terrain_subtile_get(next,
-			                              mm,
-			                              nn);
-			terrain_subtile_set(ter, m, n++, h);
+			short h = terrain_tile_get(next, mm, nn);
+			terrain_tile_set(ter, m, n++, h);
 		}
 		++m;
 		n = 0;
 	}
 }
 
-static void sample_subtile22(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile22(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
 		return;
 	}
 
-	terrain_subtile_exists(ter, TERRAIN_NEXT_BR);
+	terrain_tile_exists(ter, TERRAIN_NEXT_BR);
 
 	// center border samples
 	int mm;
@@ -267,18 +257,16 @@ static void sample_subtile22(terrain_subtile_t* ter,
 	{
 		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 		{
-			short h = terrain_subtile_get(next,
-			                              mm,
-			                              nn);
-			terrain_subtile_set(ter, m, n++, h);
+			short h = terrain_tile_get(next, mm, nn);
+			terrain_tile_set(ter, m, n++, h);
 		}
 		++m;
 		n = 128;
 	}
 }
 
-static void sample_subtile23(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile23(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -290,15 +278,13 @@ static void sample_subtile23(terrain_subtile_t* ter,
 	int m = 128;
 	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              mm,
-		                              2);
-		terrain_subtile_set(ter, m++, 257, h);
+		short h = terrain_tile_get(next, mm, 2);
+		terrain_tile_set(ter, m++, 257, h);
 	}
 }
 
-static void sample_subtile30(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile30(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -306,14 +292,13 @@ static void sample_subtile30(terrain_subtile_t* ter,
 	}
 
 	// bottom-left border sample
-	short h = terrain_subtile_get(next,
-	                              2,
-	                              TERRAIN_SAMPLES_SUBTILE - 3);
-	terrain_subtile_set(ter, 257, -1, h);
+	short h = terrain_tile_get(next, 2,
+	                           TERRAIN_SAMPLES_SUBTILE - 3);
+	terrain_tile_set(ter, 257, -1, h);
 }
 
-static void sample_subtile31(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile31(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -325,15 +310,13 @@ static void sample_subtile31(terrain_subtile_t* ter,
 	int n = 0;
 	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              2,
-		                              nn);
-		terrain_subtile_set(ter, 257, n++, h);
+		short h = terrain_tile_get(next, 2, nn);
+		terrain_tile_set(ter, 257, n++, h);
 	}
 }
 
-static void sample_subtile32(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile32(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -345,15 +328,13 @@ static void sample_subtile32(terrain_subtile_t* ter,
 	int n = 128;
 	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
 	{
-		short h = terrain_subtile_get(next,
-		                              2,
-		                              nn);
-		terrain_subtile_set(ter, 257, n++, h);
+		short h = terrain_tile_get(next, 2, nn);
+		terrain_tile_set(ter, 257, n++, h);
 	}
 }
 
-static void sample_subtile33(terrain_subtile_t* ter,
-                             terrain_subtile_t* next)
+static void sample_subtile33(terrain_tile_t* ter,
+                             terrain_tile_t* next)
 {
 	if(next == NULL)
 	{
@@ -361,10 +342,8 @@ static void sample_subtile33(terrain_subtile_t* ter,
 	}
 
 	// bottom-right border sample
-	short h = terrain_subtile_get(next,
-	                              2,
-	                              2);
-	terrain_subtile_set(ter, 257, 257, h);
+	short h = terrain_tile_get(next, 2, 2);
+	terrain_tile_set(ter, 257, 257, h);
 }
 
 static void sample_subtile(int x, int y, int zoom, int i, int j)
@@ -377,7 +356,7 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 	int r;
 	int c;
 	int done = 1;
-	terrain_subtile_t* next[16] =
+	terrain_tile_t* next[16] =
 	{
 		NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL,
@@ -400,10 +379,10 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 			}
 
 			int idx = 4*r + c;
-			next[idx] = terrain_subtile_import(".",
-			                                   xx + c - 1,
-			                                   yy + r - 1,
-			                                   zz);
+			next[idx] = terrain_tile_import(".",
+			                                xx + c - 1,
+			                                yy + r - 1,
+			                                zz);
 			if(next[idx])
 			{
 				done = 0;
@@ -416,7 +395,7 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 		return;
 	}
 
-	terrain_subtile_t* ter = terrain_subtile_new(x, y, zoom, i, j);
+	terrain_tile_t* ter = terrain_tile_new(x, y, zoom, i, j);
 	if(ter == NULL)
 	{
 		goto fail_ter;
@@ -441,7 +420,7 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 	sample_subtile33(ter, next[15]);
 
 	// export this subtile
-	if(terrain_subtile_export(ter, ".") == 0)
+	if(terrain_tile_export(ter, ".") == 0)
 	{
 		goto fail_export;
 	}
@@ -452,14 +431,14 @@ static void sample_subtile(int x, int y, int zoom, int i, int j)
 	{
 		free(next[idx]);
 	}
-	terrain_subtile_delete(&ter);
+	terrain_tile_delete(&ter);
 
 	// success
 	return;
 
 	// failure
 	fail_export:
-		terrain_subtile_delete(&ter);
+		terrain_tile_delete(&ter);
 	fail_ter:
 	{
 		for(idx = 0; idx < 16; ++idx)

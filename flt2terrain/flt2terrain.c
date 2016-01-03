@@ -25,7 +25,7 @@
 #include <assert.h>
 #include <math.h>
 #include "flt/flt_tile.h"
-#include "terrain/terrain_subtile.h"
+#include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 
 #define LOG_TAG "flt2terrain"
@@ -44,7 +44,7 @@ static flt_tile_t* flt_bl = NULL;
 static flt_tile_t* flt_bc = NULL;
 static flt_tile_t* flt_br = NULL;
 
-static void sample_subtile(terrain_subtile_t* ter)
+static void sample_subtile(terrain_tile_t* ter)
 {
 	assert(ter);
 	LOGD("debug");
@@ -59,7 +59,7 @@ static void sample_subtile(terrain_subtile_t* ter)
 		{
 			double lat;
 			double lon;
-			terrain_subtile_coord(ter, m, n, &lat, &lon);
+			terrain_tile_coord(ter, m, n, &lat, &lon);
 
 			// flt_cc most likely place to find sample
 			// At edges of range a subtile may not be
@@ -75,7 +75,7 @@ static void sample_subtile(terrain_subtile_t* ter)
 			   (flt_tr && flt_tile_sample(flt_tr, lat, lon, &h)) ||
 			   (flt_br && flt_tile_sample(flt_br, lat, lon, &h)))
 			{
-				terrain_subtile_set(ter, m, n, h);
+				terrain_tile_set(ter, m, n, h);
 			}
 		}
 	}
@@ -88,12 +88,12 @@ static int sample_tile(int x, int y, int zoom)
 	// sample subtiles i,j
 	int i;
 	int j;
-	terrain_subtile_t* ter = NULL;
+	terrain_tile_t* ter = NULL;
 	for(i = 0; i < TERRAIN_SUBTILE_COUNT; ++i)
 	{
 		for(j = 0; j < TERRAIN_SUBTILE_COUNT; ++j)
 		{
-			ter = terrain_subtile_new(x, y, zoom, i, j);
+			ter = terrain_tile_new(x, y, zoom, i, j);
 			if(ter == NULL)
 			{
 				return 0;
@@ -101,12 +101,12 @@ static int sample_tile(int x, int y, int zoom)
 
 			sample_subtile(ter);
 
-			if(terrain_subtile_export(ter, ".") == 0)
+			if(terrain_tile_export(ter, ".") == 0)
 			{
 				goto fail_export;
 			}
 
-			terrain_subtile_delete(&ter);
+			terrain_tile_delete(&ter);
 		}
 	}
 
@@ -115,7 +115,7 @@ static int sample_tile(int x, int y, int zoom)
 
 	// failure
 	fail_export:
-		terrain_subtile_delete(&ter);
+		terrain_tile_delete(&ter);
 	return 0;
 }
 
