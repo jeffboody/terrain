@@ -446,7 +446,7 @@ static void sample_tile(int x, int y, int zoom)
 	int idx;
 	for(idx = 0; idx < 16; ++idx)
 	{
-		free(next[idx]);
+		terrain_tile_delete(&next[idx]);
 	}
 	terrain_tile_delete(&ter);
 
@@ -460,7 +460,7 @@ static void sample_tile(int x, int y, int zoom)
 	{
 		for(idx = 0; idx < 16; ++idx)
 		{
-			free(next[idx]);
+			terrain_tile_delete(&next[idx]);
 		}
 	}
 }
