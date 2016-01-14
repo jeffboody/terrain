@@ -24,7 +24,7 @@
 #ifndef terrain_tile_H
 #define terrain_tile_H
 
-#include "../texgz/texgz_tex.h"
+#include <stdio.h>
 
 /*
  * There are 257x257 samples to ensure that the tile
@@ -73,11 +73,10 @@ typedef struct
 	int y;
 	int zoom;
 
-	// tex is stored as SHORT+LUMINANCE
 	// data units are measured in feet because the highest
 	// point, Mt Everest is 29029 feet,  which matches up
 	// nicely with range of shorts (-32768 to 32767)
-	texgz_tex_t* tex;
+	short data[TERRAIN_SAMPLES_TOTAL*TERRAIN_SAMPLES_TOTAL];
 
 	// min/max altitude for the tile
 	short min;

@@ -8,6 +8,4 @@ LOCAL_SRC_FILES := terrain/terrain_tile.c terrain/terrain_util.c terrain/terrain
 LOCAL_LDLIBS    := -Llibs/armeabi \
                    -llog
 
-LOCAL_SHARED_LIBRARIES := libtexgz
-
 include $(BUILD_SHARED_LIBRARY)

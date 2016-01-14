@@ -172,16 +172,10 @@ terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 		return NULL;
 	}
 
-	int samples = TERRAIN_SAMPLES_TOTAL;
-	self->tex = texgz_tex_new(samples, samples,
-	                          samples, samples,
-	                          TEXGZ_SHORT,
-	                          TEXGZ_LUMINANCE,
-	                          NULL);
-	if(self->tex == NULL)
-	{
-		goto fail_tex;
-	}
+	int samples = TERRAIN_SAMPLES_TOTAL*
+	              TERRAIN_SAMPLES_TOTAL*
+	              sizeof(short);
+	memset(self->data, 0, samples);
 
 	self->x    = x;
 	self->y    = y;
@@ -194,11 +188,6 @@ terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 
 	// success
 	return self;
-
-	// failure
-	fail_tex:
-		free(self);
-	return NULL;
 }
 
 void terrain_tile_delete(terrain_tile_t** _self)
@@ -208,7 +197,6 @@ void terrain_tile_delete(terrain_tile_t** _self)
 	terrain_tile_t* self = *_self;
 	if(self)
 	{
-		texgz_tex_delete(&self->tex);
 		free(self);
 		*_self = NULL;
 	}
@@ -291,33 +279,33 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 		self->next = (char)  readintbe(buffer, 12);
 	}
 
-	// read the samples
+	// allocate src buffer
 	size -= TERRAIN_HSIZE;
-	texgz_tex_t* tex = texgz_tex_importf(f, size);
-	if(tex == NULL)
+	char* src = (char*) malloc(size*sizeof(char));
+	if(src == NULL)
 	{
-		goto fail_tex;
+		LOGE("malloc failed");
+		goto fail_src;
 	}
-	self->tex = tex;
 
-	// verify tex parameters
-	int samples = TERRAIN_SAMPLES_TOTAL;
-	if((tex->width   == samples) &&
-	   (tex->height  == samples) &&
-	   (tex->stride  == samples) &&
-	   (tex->vstride == samples) &&
-	   (tex->type    == TEXGZ_SHORT) &&
-	   (tex->format  == TEXGZ_LUMINANCE))
+	// read the samples
+	if(fread((void*) src, sizeof(char), size, f) != size)
 	{
-		// ok
+		LOGE("fread failed");
+		goto fail_read;
 	}
-	else
+
+	int    bytes    = TERRAIN_SAMPLES_TOTAL*
+	                  TERRAIN_SAMPLES_TOTAL*
+	                  sizeof(short);
+	uLong  dst_size = (uLong) (bytes);
+	Bytef* dst      = (Bytef*) self->data;
+	uLong  src_size = (uLong) size;
+	if(uncompress(dst, &dst_size, (const Bytef*) src,
+	              src_size) != Z_OK)
 	{
-		LOGE("invalid %ix%i, %ix%i, type=0x%x, format=0x%X",
-		     tex->width, tex->height,
-		     tex->stride, tex->vstride,
-		     tex->type, tex->format);
-		goto fail_param;
+		LOGE("fail uncompress");
+		goto fail_uncompress;
 	}
 
 	self->x    = x;
@@ -328,9 +316,10 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	return self;
 
 	// failure
-	fail_param:
-		texgz_tex_delete(&self->tex);
-	fail_tex:
+	fail_uncompress:
+	fail_read:
+		free(src);
+	fail_src:
 	fail_header:
 		free(self);
 	return NULL;
@@ -405,7 +394,7 @@ int terrain_tile_export(terrain_tile_t* self,
 	}
 
 	// compress buffer
-	unsigned char* src = (unsigned char*) self->tex->pixels;
+	unsigned char* src = (unsigned char*) self->data;
 	if(compress((Bytef*) dst, (uLongf*) &dst_size,
 	            (const Bytef*) src, src_size) != Z_OK)
 	{
@@ -468,9 +457,7 @@ void terrain_tile_set(terrain_tile_t* self,
 	}
 
 	int idx = m*samples + n;
-	texgz_tex_t* tex    = self->tex;
-	short*       pixels = (short*) tex->pixels;
-	pixels[idx] = h;
+	self->data[idx] = h;
 }
 
 short terrain_tile_get(terrain_tile_t* self,
@@ -491,9 +478,7 @@ short terrain_tile_get(terrain_tile_t* self,
 	}
 
 	int idx = m*samples + n;
-	texgz_tex_t* tex    = self->tex;
-	short*       pixels = (short*) tex->pixels;
-	return pixels[idx];
+	return self->data[idx];
 }
 
 void terrain_tile_getBlock(terrain_tile_t* self,
