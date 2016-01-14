@@ -28,6 +28,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
+#include <zlib.h>
 #include "terrain_tile.h"
 #include "terrain_util.h"
 
@@ -390,19 +391,46 @@ int terrain_tile_export(terrain_tile_t* self,
 		goto fail_header;
 	}
 
-	// export the samples
-	if(texgz_tex_exportf(self->tex, f) == 0)
+	// allocate dst buffer
+	int bytes = TERRAIN_SAMPLES_TOTAL*
+	            TERRAIN_SAMPLES_TOTAL*sizeof(short);
+	uLong src_size = (uLong) (bytes);
+	uLong dst_size = compressBound(src_size);
+	unsigned char* dst = (unsigned char*)
+	                     malloc(dst_size*sizeof(unsigned char));
+	if(dst == NULL)
 	{
-		goto fail_tex;
+		LOGE("malloc failed");
+		goto fail_dst;
 	}
 
+	// compress buffer
+	unsigned char* src = (unsigned char*) self->tex->pixels;
+	if(compress((Bytef*) dst, (uLongf*) &dst_size,
+	            (const Bytef*) src, src_size) != Z_OK)
+	{
+		LOGE("compress failed");
+		goto fail_compress;
+	}
+
+	// write buffer
+	if(fwrite(dst, sizeof(unsigned char), dst_size, f) != dst_size)
+	{
+		LOGE("fwrite failed");
+		goto fail_fwrite;
+	}
+
+	free(dst);
 	fclose(f);
 
 	// success
 	return 1;
 
 	// failure
-	fail_tex:
+	fail_fwrite:
+	fail_compress:
+		free(dst);
+	fail_dst:
 	fail_header:
 		fclose(f);
 		unlink(fname);
