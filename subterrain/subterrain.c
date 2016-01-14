@@ -42,8 +42,8 @@ static void sample_lod00(terrain_tile_t* ter,
 
 	// top-left border sample
 	short h = terrain_tile_get(next,
-	                           TERRAIN_SAMPLES_SUBTILE - 3,
-	                           TERRAIN_SAMPLES_SUBTILE - 3);
+	                           TERRAIN_SAMPLES_TILE - 3,
+	                           TERRAIN_SAMPLES_TILE - 3);
 	terrain_tile_set(ter, -1, -1, h);
 }
 
@@ -58,10 +58,10 @@ static void sample_lod01(terrain_tile_t* ter,
 	// top border samples
 	int nn;
 	int n = 0;
-	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 	{
 		short h = terrain_tile_get(next,
-		                           TERRAIN_SAMPLES_SUBTILE - 3,
+		                           TERRAIN_SAMPLES_TILE - 3,
 		                           nn);
 		terrain_tile_set(ter, -1, n++, h);
 	}
@@ -78,10 +78,10 @@ static void sample_lod02(terrain_tile_t* ter,
 	// top border samples
 	int nn;
 	int n = 128;
-	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 	{
 		short h = terrain_tile_get(next,
-		                           TERRAIN_SAMPLES_SUBTILE - 3,
+		                           TERRAIN_SAMPLES_TILE - 3,
 		                           nn);
 		terrain_tile_set(ter, -1, n++, h);
 	}
@@ -97,7 +97,7 @@ static void sample_lod03(terrain_tile_t* ter,
 
 	// top-right border sample
 	short h = terrain_tile_get(next,
-	                           TERRAIN_SAMPLES_SUBTILE - 3,
+	                           TERRAIN_SAMPLES_TILE - 3,
 	                           2);
 	terrain_tile_set(ter, -1, 257, h);
 }
@@ -113,10 +113,10 @@ static void sample_lod10(terrain_tile_t* ter,
 	// left border samples
 	int mm;
 	int m = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
 		short h = terrain_tile_get(next, mm,
-		                           TERRAIN_SAMPLES_SUBTILE - 3);
+		                           TERRAIN_SAMPLES_TILE - 3);
 		terrain_tile_set(ter, m++, -1, h);
 	}
 }
@@ -140,9 +140,9 @@ static void sample_lod11(terrain_tile_t* ter,
 	int nn;
 	int m = 0;
 	int n = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 		{
 			short h = terrain_tile_get(next, mm, nn);
 			terrain_tile_set(ter, m, n++, h);
@@ -171,9 +171,9 @@ static void sample_lod12(terrain_tile_t* ter,
 	int nn;
 	int m = 0;
 	int n = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 		{
 			short h = terrain_tile_get(next, mm, nn);
 			terrain_tile_set(ter, m, n++, h);
@@ -194,7 +194,7 @@ static void sample_lod13(terrain_tile_t* ter,
 	// right border samples
 	int mm;
 	int m = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
 		short h = terrain_tile_get(next, mm, 2);
 		terrain_tile_set(ter, m++, 257, h);
@@ -212,10 +212,10 @@ static void sample_lod20(terrain_tile_t* ter,
 	// left border samples
 	int mm;
 	int m = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
 		short h = terrain_tile_get(next, mm,
-		                           TERRAIN_SAMPLES_SUBTILE - 3);
+		                           TERRAIN_SAMPLES_TILE - 3);
 		terrain_tile_set(ter, m++, -1, h);
 	}
 }
@@ -239,9 +239,9 @@ static void sample_lod21(terrain_tile_t* ter,
 	int nn;
 	int m = 128;
 	int n = 0;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 		{
 			short h = terrain_tile_get(next, mm, nn);
 			terrain_tile_set(ter, m, n++, h);
@@ -270,9 +270,9 @@ static void sample_lod22(terrain_tile_t* ter,
 	int nn;
 	int m = 128;
 	int n = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
-		for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+		for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 		{
 			short h = terrain_tile_get(next, mm, nn);
 			terrain_tile_set(ter, m, n++, h);
@@ -293,7 +293,7 @@ static void sample_lod23(terrain_tile_t* ter,
 	// right border samples
 	int mm;
 	int m = 128;
-	for(mm = 0; mm < TERRAIN_SAMPLES_SUBTILE; mm += 2)
+	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
 		short h = terrain_tile_get(next, mm, 2);
 		terrain_tile_set(ter, m++, 257, h);
@@ -310,7 +310,7 @@ static void sample_lod30(terrain_tile_t* ter,
 
 	// bottom-left border sample
 	short h = terrain_tile_get(next, 2,
-	                           TERRAIN_SAMPLES_SUBTILE - 3);
+	                           TERRAIN_SAMPLES_TILE - 3);
 	terrain_tile_set(ter, 257, -1, h);
 }
 
@@ -325,7 +325,7 @@ static void sample_lod31(terrain_tile_t* ter,
 	// bottom border samples
 	int nn;
 	int n = 0;
-	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 	{
 		short h = terrain_tile_get(next, 2, nn);
 		terrain_tile_set(ter, 257, n++, h);
@@ -343,7 +343,7 @@ static void sample_lod32(terrain_tile_t* ter,
 	// bottom border samples
 	int nn;
 	int n = 128;
-	for(nn = 0; nn < TERRAIN_SAMPLES_SUBTILE; nn += 2)
+	for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 	{
 		short h = terrain_tile_get(next, 2, nn);
 		terrain_tile_set(ter, 257, n++, h);

@@ -94,9 +94,9 @@ static void terrain_tile_updateMinMax(terrain_tile_t* self)
 	short h;
 	short min = TERRAIN_HEIGHT_MAX;
 	short max = TERRAIN_HEIGHT_MIN;
-	for(m = 0; m < TERRAIN_SAMPLES_SUBTILE; ++m)
+	for(m = 0; m < TERRAIN_SAMPLES_TILE; ++m)
 	{
-		for(n = 0; n < TERRAIN_SAMPLES_SUBTILE; ++n)
+		for(n = 0; n < TERRAIN_SAMPLES_TILE; ++n)
 		{
 			h = terrain_tile_get(self, m, n);
 			if(h < min)
@@ -171,7 +171,7 @@ terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 		return NULL;
 	}
 
-	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_TOTAL;
 	self->tex = texgz_tex_new(samples, samples,
 	                          samples, samples,
 	                          TEXGZ_SHORT,
@@ -300,7 +300,7 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	self->tex = tex;
 
 	// verify tex parameters
-	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_TOTAL;
 	if((tex->width   == samples) &&
 	   (tex->height  == samples) &&
 	   (tex->stride  == samples) &&
@@ -428,10 +428,10 @@ void terrain_tile_set(terrain_tile_t* self,
 	assert(self);
 
 	// offset indices by border
-	m += TERRAIN_BORDER_SIZE;
-	n += TERRAIN_BORDER_SIZE;
+	m += TERRAIN_SAMPLES_BORDER;
+	n += TERRAIN_SAMPLES_BORDER;
 
-	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_TOTAL;
 	if((m < 0) || (m >= samples) ||
 	   (n < 0) || (n >= samples))
 	{
@@ -451,10 +451,10 @@ short terrain_tile_get(terrain_tile_t* self,
 	assert(self);
 
 	// offset indices by border
-	m += TERRAIN_BORDER_SIZE;
-	n += TERRAIN_BORDER_SIZE;
+	m += TERRAIN_SAMPLES_BORDER;
+	n += TERRAIN_SAMPLES_BORDER;
 
-	int samples = TERRAIN_SAMPLES_SUBTILE + 2*TERRAIN_BORDER_SIZE;
+	int samples = TERRAIN_SAMPLES_TOTAL;
 	if((m < 0) || (m >= samples) ||
 	   (n < 0) || (n >= samples))
 	{
@@ -474,11 +474,11 @@ void terrain_tile_getBlock(terrain_tile_t* self,
 {
 	assert(self);
 	assert(data);
-	assert(((TERRAIN_SAMPLES_SUBTILE - 1) % blocks) == 0);
+	assert(((TERRAIN_SAMPLES_TILE - 1) % blocks) == 0);
 
 	int m;
 	int n;
-	int step = (TERRAIN_SAMPLES_SUBTILE - 1)/blocks;
+	int step = (TERRAIN_SAMPLES_TILE - 1)/blocks;
 	int size = step + 1;
 	for(m = 0; m < size; ++m)
 	{

@@ -57,8 +57,8 @@ static int sample_tile(int x, int y, int zoom)
 
 	int m;
 	int n;
-	int min = -TERRAIN_BORDER_SIZE;
-	int max = TERRAIN_SAMPLES_SUBTILE + TERRAIN_BORDER_SIZE;
+	int min = -TERRAIN_SAMPLES_BORDER;
+	int max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER;
 	for(m = min; m < max; ++m)
 	{
 		for(n = min; n < max; ++n)

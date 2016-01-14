@@ -36,9 +36,10 @@
  * for hill/relief shading. The sample count does not
  * include the border.
  */
-#define TERRAIN_SAMPLES_SUBTILE 257
-#define TERRAIN_BORDER_SIZE     1
-#define TERRAIN_NODATA          0
+#define TERRAIN_SAMPLES_TOTAL  259
+#define TERRAIN_SAMPLES_TILE   257
+#define TERRAIN_SAMPLES_BORDER 1
+#define TERRAIN_NODATA         0
 
 /*
  * flags for next LOD existance

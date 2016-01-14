@@ -58,7 +58,7 @@ void  terrain_sample2coord(int x, int y, int zoom,
 	LOGD("debug x=%i, y=%i, zoom=%i, m=%i, n=%i",
 	     x, y, zoom, m, n);
 
-	float s  = (float) TERRAIN_SAMPLES_SUBTILE;
+	float s  = (float) TERRAIN_SAMPLES_TILE;
 	float xx = (float) x;
 	float yy = (float) y;
 	float nn = (float) n/(s - 1.0f);
