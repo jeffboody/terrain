@@ -70,9 +70,9 @@
 /*
  * 16 byte header
  * int magic
- * int min  (cast to short)
- * int max  (cast to short)
- * int next (cast to char)
+ * int min (cast to short)
+ * int max (cast to short)
+ * int flags
  */
 #define TERRAIN_MAGIC 0x7EBB00D9
 #define TERRAIN_HSIZE 16
@@ -93,8 +93,8 @@ typedef struct
 	short min;
 	short max;
 
-	// next LOD existance
-	char next;
+	// LOD existance flags
+	int flags;
 } terrain_tile_t;
 
 terrain_tile_t* terrain_tile_new(int x, int y, int zoom);
@@ -122,7 +122,7 @@ void            terrain_tile_getNormalMap(terrain_tile_t* self,
 void            terrain_tile_adjustMinMax(terrain_tile_t* self,
                                           short min, short max);
 void            terrain_tile_exists(terrain_tile_t* self,
-                                    char next);
+                                    int flags);
 int             terrain_tile_tl(terrain_tile_t* self);
 int             terrain_tile_bl(terrain_tile_t* self);
 int             terrain_tile_tr(terrain_tile_t* self);

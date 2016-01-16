@@ -274,10 +274,10 @@ terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 	              sizeof(short);
 	memset(self->data, 0, samples);
 
-	self->x    = x;
-	self->y    = y;
-	self->zoom = zoom;
-	self->next = 0;
+	self->x     = x;
+	self->y     = y;
+	self->zoom  = zoom;
+	self->flags = 0;
 
 	// updated on export if not set
 	self->min = TERRAIN_HEIGHT_MAX;
@@ -365,15 +365,15 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	int magic = readintle(buffer, 0);
 	if(magic == TERRAIN_MAGIC)
 	{
-		self->min  = (short) readintle(buffer, 4);
-		self->max  = (short) readintle(buffer, 8);
-		self->next = (char)  readintle(buffer, 12);
+		self->min   = (short) readintle(buffer, 4);
+		self->max   = (short) readintle(buffer, 8);
+		self->flags = readintle(buffer, 12);
 	}
 	else if(swapendian(magic) == TERRAIN_MAGIC)
 	{
-		self->min  = (short) readintbe(buffer, 4);
-		self->max  = (short) readintbe(buffer, 8);
-		self->next = (char)  readintbe(buffer, 12);
+		self->min   = (short) readintbe(buffer, 4);
+		self->max   = (short) readintbe(buffer, 8);
+		self->flags = readintbe(buffer, 12);
 	}
 
 	// allocate src buffer
@@ -470,8 +470,8 @@ int terrain_tile_export(terrain_tile_t* self,
 		goto fail_header;
 	}
 
-	int next = (int) self->next;
-	if(fwrite(&next, sizeof(int), 1, f) != 1)
+	int flags = self->flags;
+	if(fwrite(&flags, sizeof(int), 1, f) != 1)
 	{
 		LOGE("fwrite failed");
 		goto fail_header;
@@ -659,39 +659,39 @@ void terrain_tile_adjustMinMax(terrain_tile_t* self,
 }
 
 void terrain_tile_exists(terrain_tile_t* self,
-                         char next)
+                         int flags)
 {
 	assert(self);
 
-	self->next |= next;
+	self->flags |= flags;
 }
 
 int terrain_tile_tl(terrain_tile_t* self)
 {
 	assert(self);
 
-	return self->next & TERRAIN_NEXT_TL;
+	return self->flags & TERRAIN_NEXT_TL;
 }
 
 int terrain_tile_bl(terrain_tile_t* self)
 {
 	assert(self);
 
-	return self->next & TERRAIN_NEXT_BL;
+	return self->flags & TERRAIN_NEXT_BL;
 }
 
 int terrain_tile_tr(terrain_tile_t* self)
 {
 	assert(self);
 
-	return self->next & TERRAIN_NEXT_TR;
+	return self->flags & TERRAIN_NEXT_TR;
 }
 
 int terrain_tile_br(terrain_tile_t* self)
 {
 	assert(self);
 
-	return self->next & TERRAIN_NEXT_BR;
+	return self->flags & TERRAIN_NEXT_BR;
 }
 
 short terrain_tile_min(terrain_tile_t* self)
