@@ -6,6 +6,6 @@ LOCAL_CFLAGS    := -Wall
 LOCAL_SRC_FILES := terrain/terrain_tile.c terrain/terrain_util.c terrain/terrain_log.c
 
 LOCAL_LDLIBS    := -Llibs/armeabi \
-                   -llog
+                   -llog -lz
 
 include $(BUILD_SHARED_LIBRARY)
