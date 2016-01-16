@@ -352,28 +352,10 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 		return NULL;
 	}
 
-	unsigned char buffer[TERRAIN_HSIZE];
-	int bytes_read = fread(buffer, sizeof(unsigned char),
-	                       TERRAIN_HSIZE, f);
-	if(bytes_read != TERRAIN_HSIZE)
+	if(terrain_tile_headerf(f, &self->min, &self->max,
+	                        &self->flags) == 0)
 	{
-		LOGE("failed to read header");
 		goto fail_header;
-	}
-
-	// parse the header
-	int magic = readintle(buffer, 0);
-	if(magic == TERRAIN_MAGIC)
-	{
-		self->min   = (short) readintle(buffer, 4);
-		self->max   = (short) readintle(buffer, 8);
-		self->flags = readintle(buffer, 12);
-	}
-	else if(swapendian(magic) == TERRAIN_MAGIC)
-	{
-		self->min   = (short) readintbe(buffer, 4);
-		self->max   = (short) readintbe(buffer, 8);
-		self->flags = readintbe(buffer, 12);
 	}
 
 	// allocate src buffer
@@ -420,6 +402,47 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	fail_header:
 		free(self);
 	return NULL;
+}
+
+int terrain_tile_headerf(FILE* f,
+                         short* min, short* max,
+                         int* flags)
+{
+	assert(f);
+	assert(min);
+	assert(max);
+	assert(flags);
+
+	unsigned char buffer[TERRAIN_HSIZE];
+	int bytes_read = fread(buffer, sizeof(unsigned char),
+	                       TERRAIN_HSIZE, f);
+	if(bytes_read != TERRAIN_HSIZE)
+	{
+		LOGE("failed to read header");
+		return 0;
+	}
+
+	// parse the header
+	int magic = readintle(buffer, 0);
+	if(magic == TERRAIN_MAGIC)
+	{
+		*min   = (short) readintle(buffer, 4);
+		*max   = (short) readintle(buffer, 8);
+		*flags = readintle(buffer, 12);
+	}
+	else if(swapendian(magic) == TERRAIN_MAGIC)
+	{
+		*min   = (short) readintbe(buffer, 4);
+		*max   = (short) readintbe(buffer, 8);
+		*flags = readintbe(buffer, 12);
+	}
+	else
+	{
+		LOGE("bad magic");
+		return 0;
+	}
+
+	return 1;
 }
 
 int terrain_tile_export(terrain_tile_t* self,
