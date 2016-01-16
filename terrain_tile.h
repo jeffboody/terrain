@@ -42,6 +42,17 @@
 #define TERRAIN_NODATA         0
 
 /*
+ * The normal map is computed from (1,0,dzdx)x(0,1,dzdy).
+ * Resulting in (-dzdx, -dzdy, 1) = (nx, ny, 1). The values
+ * for nx,ny are stored as a luminance+alpha texture with
+ * unsigned bytes. The range of nx and ny is clamped to
+ * (-2,2) prior to conversion to unsigned byte.
+ * The steepest slope that can be represented is ~60
+ * degrees.
+ */
+#define TERRAIN_SAMPLES_NORMAL 256
+
+/*
  * flags for next LOD existance
  */
 #define TERRAIN_NEXT_TL  0X1
@@ -57,7 +68,7 @@
 #define TERRAIN_HEIGHT_MAX 32767
 
 /*
- * header uncompressed consists of:
+ * 16 byte header
  * int magic
  * int min  (cast to short)
  * int max  (cast to short)
@@ -106,6 +117,8 @@ void            terrain_tile_getBlock(terrain_tile_t* self,
                                       int blocks,
                                       int r, int c,
                                       short* data);
+void            terrain_tile_getNormalMap(terrain_tile_t* self,
+                                          unsigned char* data);
 void            terrain_tile_adjustMinMax(terrain_tile_t* self,
                                           short min, short max);
 void            terrain_tile_exists(terrain_tile_t* self,

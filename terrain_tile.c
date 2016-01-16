@@ -158,6 +158,103 @@ static int swapendian(int i)
 	return o;
 }
 
+static short terrain_tile_interpolate(terrain_tile_t* self,
+                                      float u, float v)
+{
+	assert(self);
+	LOGD("debug u=%f, v=%f", u, v);
+
+	// "float indices"
+	float pu = u*(TERRAIN_SAMPLES_TILE - 1);
+	float pv = v*(TERRAIN_SAMPLES_TILE - 1);
+
+	// determine indices to sample
+	int n0 = (int) pu;
+	int m0 = (int) pv;
+	int n1 = n0 + 1;
+	int m1 = m0 + 1;
+
+	// clamp the indices
+	int min = -TERRAIN_SAMPLES_BORDER;
+	int max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER;
+	if(n0 < min)  { n0 = min;     }
+	if(n1 >= max) { n1 = max - 1; }
+	if(m0 < min)  { m0 = min;     }
+	if(m1 >= max) { m1 = max - 1; }
+
+	// sample interpolation values
+	float h00 = (float) terrain_tile_get(self, m0, n0);
+	float h01 = (float) terrain_tile_get(self, m0, n1);
+	float h10 = (float) terrain_tile_get(self, m1, n0);
+	float h11 = (float) terrain_tile_get(self, m1, n1);
+
+	// compute interpolation coordinates
+	float s0 = (float) n0;
+	float t0 = (float) m0;
+	float s  = pu - s0;
+	float t  = pv - t0;
+
+	// interpolate u
+	float h0010 = h00 + s*(h10 - h00);
+	float h0111 = h01 + s*(h11 - h01);
+
+	// interpolate v
+	return (short) (h0010 + t*(h0111 - h0010) + 0.5f);
+}
+
+static void terrain_tile_computeNormal(terrain_tile_t* self,
+                                       int i, int j,
+                                       float dx, float dy,
+                                       unsigned char* pnx,
+                                       unsigned char* pny)
+{
+	assert(self);
+	assert(pnx);
+	assert(pny);
+
+	// compute the half-sample distance to n/e/s/w samples
+	float samples = (float) (TERRAIN_SAMPLES_NORMAL - 1);
+	float half    = 1.0f/(2.0f*samples);
+
+	// interpolate n/e/s/w samples
+	float u = (float) j/samples;
+	float v = (float) i/samples;
+	short n = terrain_tile_interpolate(self, u, v - half);
+	short e = terrain_tile_interpolate(self, u + half, v);
+	short s = terrain_tile_interpolate(self, u, v + half);
+	short w = terrain_tile_interpolate(self, u - half, v);
+
+	// compute normal from (1,0,dzdx)x(0,1,dzdy).
+	// mask:
+	//        -0.5*n
+	// -0.5*w  (u,v) 0.5*e
+	//         0.5*s
+	// (-dzdx, -dzdy, 1) = (nx, ny, 1)
+	// normalize dx,dy to 1
+	float dzdx = 0.5f*(e - w);
+	float dzdy = 0.5f*(s - n);
+	float nx   = -dzdx/dx;
+	float ny   = -dzdy/dy;
+
+	// clamp nx and ny to (-2.0, 2.0)
+	if(nx < -2.0f) { nx = -2.0f; }
+	if(nx >  2.0f) { nx =  2.0f; }
+	if(ny < -2.0f) { ny = -2.0f; }
+	if(ny >  2.0f) { ny =  2.0f; }
+
+	// scale nx and ny to (0.0, 1.0)
+	nx = (nx/4.0f) + 0.5f;
+	ny = (ny/4.0f) + 0.5f;
+
+	// scale nx and ny to (0, 255)
+	unsigned char inx = (unsigned char) (nx*255.0f);
+	unsigned char iny = (unsigned char) (ny*255.0f);
+
+	// store nx and ny
+	*pnx = inx;
+	*pny = iny;
+}
+
 /***********************************************************
 * public                                                   *
 ***********************************************************/
@@ -501,6 +598,46 @@ void terrain_tile_getBlock(terrain_tile_t* self,
 			int nn = step*c + n;
 			data[size*m + n] = terrain_tile_get(self,
 			                                    mm, nn);
+		}
+	}
+}
+
+void terrain_tile_getNormalMap(terrain_tile_t* self,
+                               unsigned char* data)
+{
+	assert(self);
+	assert(data);
+
+	// compute dx and dy of mask
+	double lat0;
+	double lon0;
+	double lat1;
+	double lon1;
+	terrain_tile_coord(self, 0, 0, &lat0, &lon0);
+	terrain_tile_coord(self, 1, 1, &lat1, &lon1);
+
+	float  x0;
+	float  y0;
+	float  x1;
+	float  y1;
+	terrain_coord2xy(lat0, lon0, &x0, &y0);
+	terrain_coord2xy(lat1, lon1, &x1, &y1);
+
+	float dx = x1 - x0;
+	float dy = y1 - y0;
+
+	// compute normal map
+	int i;
+	int j;
+	for(i = 0; i < TERRAIN_SAMPLES_NORMAL; ++i)
+	{
+		for(j = 0; j < TERRAIN_SAMPLES_NORMAL; ++j)
+		{
+			int idx = 2*(TERRAIN_SAMPLES_NORMAL*i + j);
+			unsigned char* pnx = &(data[idx]);
+			unsigned char* pny = &(data[idx + 1]);
+			terrain_tile_computeNormal(self, i, j,
+			                           dx, dy, pnx, pny);
 		}
 	}
 }
