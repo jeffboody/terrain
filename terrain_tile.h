@@ -117,8 +117,6 @@ void            terrain_tile_getBlock(terrain_tile_t* self,
                                       short* data);
 void            terrain_tile_getNormalMap(terrain_tile_t* self,
                                           unsigned char* data);
-void            terrain_tile_exists(terrain_tile_t* self,
-                                    int flags);
 int             terrain_tile_tl(terrain_tile_t* self);
 int             terrain_tile_bl(terrain_tile_t* self);
 int             terrain_tile_tr(terrain_tile_t* self);

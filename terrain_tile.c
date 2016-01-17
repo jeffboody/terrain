@@ -398,6 +398,14 @@ void terrain_tile_adjustMinMax(terrain_tile_t* self,
 	}
 }
 
+void terrain_tile_exists(terrain_tile_t* self,
+                         int flags)
+{
+	assert(self);
+
+	self->flags |= flags;
+}
+
 /***********************************************************
 * public                                                   *
 ***********************************************************/
@@ -683,14 +691,6 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 			                           dx, dy, pnx, pny);
 		}
 	}
-}
-
-void terrain_tile_exists(terrain_tile_t* self,
-                         int flags)
-{
-	assert(self);
-
-	self->flags |= flags;
 }
 
 int terrain_tile_tl(terrain_tile_t* self)

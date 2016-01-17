@@ -38,6 +38,8 @@ extern void terrain_tile_set(terrain_tile_t* self,
 extern void terrain_tile_adjustMinMax(terrain_tile_t* self,
                                       short min,
                                       short max);
+extern void terrain_tile_exists(terrain_tile_t* self,
+                                int flags);
 
 #define LOG_TAG "subterrain"
 #include "terrain/terrain_log.h"
