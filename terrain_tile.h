@@ -106,14 +106,9 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 int             terrain_tile_headerf(FILE* f,
                                      short* min, short* max,
                                      int* flags);
-int             terrain_tile_export(terrain_tile_t* self,
-                                    const char* base);
 void            terrain_tile_coord(terrain_tile_t* self,
                                    int m, int n,
                                    double* lat, double* lon);
-void            terrain_tile_set(terrain_tile_t* self,
-                                 int m, int n,
-                                 short h);
 short           terrain_tile_get(terrain_tile_t* self,
                                  int m, int n);
 void            terrain_tile_getBlock(terrain_tile_t* self,
@@ -122,8 +117,6 @@ void            terrain_tile_getBlock(terrain_tile_t* self,
                                       short* data);
 void            terrain_tile_getNormalMap(terrain_tile_t* self,
                                           unsigned char* data);
-void            terrain_tile_adjustMinMax(terrain_tile_t* self,
-                                          short min, short max);
 void            terrain_tile_exists(terrain_tile_t* self,
                                     int flags);
 int             terrain_tile_tl(terrain_tile_t* self);

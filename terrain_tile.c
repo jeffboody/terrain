@@ -256,6 +256,149 @@ static void terrain_tile_computeNormal(terrain_tile_t* self,
 }
 
 /***********************************************************
+* protected                                                *
+***********************************************************/
+
+int terrain_tile_export(terrain_tile_t* self,
+                        const char* base)
+{
+	assert(self);
+	assert(base);
+
+	char fname[256];
+	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+	         base, self->zoom, self->x, self->y);
+	fname[255] = '\0';
+
+	if(terrain_mkdir(fname) == 0)
+	{
+		return 0;
+	}
+
+	FILE* f = fopen(fname, "w");
+	if(f == NULL)
+	{
+		LOGE("invalid %s", fname);
+		return 0;
+	}
+
+	// export the header
+	int magic = TERRAIN_MAGIC;
+	if(fwrite(&magic, sizeof(int), 1, f) != 1)
+	{
+		LOGE("fwrite failed");
+		goto fail_header;
+	}
+
+	// update min/max sample heights
+	terrain_tile_updateMinMax(self);
+
+	int min = (int) self->min;
+	if(fwrite(&min, sizeof(int), 1, f) != 1)
+	{
+		LOGE("fwrite failed");
+		goto fail_header;
+	}
+
+	int max = (int) self->max;
+	if(fwrite(&max, sizeof(int), 1, f) != 1)
+	{
+		LOGE("fwrite failed");
+		goto fail_header;
+	}
+
+	int flags = self->flags;
+	if(fwrite(&flags, sizeof(int), 1, f) != 1)
+	{
+		LOGE("fwrite failed");
+		goto fail_header;
+	}
+
+	// allocate dst buffer
+	int bytes = TERRAIN_SAMPLES_TOTAL*
+	            TERRAIN_SAMPLES_TOTAL*sizeof(short);
+	uLong src_size = (uLong) (bytes);
+	uLong dst_size = compressBound(src_size);
+	unsigned char* dst = (unsigned char*)
+	                     malloc(dst_size*sizeof(unsigned char));
+	if(dst == NULL)
+	{
+		LOGE("malloc failed");
+		goto fail_dst;
+	}
+
+	// compress buffer
+	unsigned char* src = (unsigned char*) self->data;
+	if(compress((Bytef*) dst, (uLongf*) &dst_size,
+	            (const Bytef*) src, src_size) != Z_OK)
+	{
+		LOGE("compress failed");
+		goto fail_compress;
+	}
+
+	// write buffer
+	if(fwrite(dst, sizeof(unsigned char), dst_size, f) != dst_size)
+	{
+		LOGE("fwrite failed");
+		goto fail_fwrite;
+	}
+
+	free(dst);
+	fclose(f);
+
+	// success
+	return 1;
+
+	// failure
+	fail_fwrite:
+	fail_compress:
+		free(dst);
+	fail_dst:
+	fail_header:
+		fclose(f);
+		unlink(fname);
+	return 0;
+}
+
+void terrain_tile_set(terrain_tile_t* self,
+                      int m, int n,
+                      short h)
+{
+	assert(self);
+
+	// offset indices by border
+	m += TERRAIN_SAMPLES_BORDER;
+	n += TERRAIN_SAMPLES_BORDER;
+
+	int samples = TERRAIN_SAMPLES_TOTAL;
+	if((m < 0) || (m >= samples) ||
+	   (n < 0) || (n >= samples))
+	{
+		LOGW("invalid m=%i, n=%i", m, n);
+		return;
+	}
+
+	int idx = m*samples + n;
+	self->data[idx] = h;
+}
+
+void terrain_tile_adjustMinMax(terrain_tile_t* self,
+                               short min, short max)
+{
+	assert(self);
+
+	if(min < self->min)
+	{
+		self->min = min;
+	}
+
+	if(max > self->max)
+	{
+		self->max = max;
+	}
+}
+
+/***********************************************************
 * public                                                   *
 ***********************************************************/
 
@@ -445,107 +588,6 @@ int terrain_tile_headerf(FILE* f,
 	return 1;
 }
 
-int terrain_tile_export(terrain_tile_t* self,
-                        const char* base)
-{
-	assert(self);
-	assert(base);
-
-	char fname[256];
-	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
-	         base, self->zoom, self->x, self->y);
-	fname[255] = '\0';
-
-	if(terrain_mkdir(fname) == 0)
-	{
-		return 0;
-	}
-
-	FILE* f = fopen(fname, "w");
-	if(f == NULL)
-	{
-		LOGE("invalid %s", fname);
-		return 0;
-	}
-
-	// export the header
-	int magic = TERRAIN_MAGIC;
-	if(fwrite(&magic, sizeof(int), 1, f) != 1)
-	{
-		LOGE("fwrite failed");
-		goto fail_header;
-	}
-
-	// update min/max sample heights
-	terrain_tile_updateMinMax(self);
-
-	int min = (int) self->min;
-	if(fwrite(&min, sizeof(int), 1, f) != 1)
-	{
-		LOGE("fwrite failed");
-		goto fail_header;
-	}
-
-	int max = (int) self->max;
-	if(fwrite(&max, sizeof(int), 1, f) != 1)
-	{
-		LOGE("fwrite failed");
-		goto fail_header;
-	}
-
-	int flags = self->flags;
-	if(fwrite(&flags, sizeof(int), 1, f) != 1)
-	{
-		LOGE("fwrite failed");
-		goto fail_header;
-	}
-
-	// allocate dst buffer
-	int bytes = TERRAIN_SAMPLES_TOTAL*
-	            TERRAIN_SAMPLES_TOTAL*sizeof(short);
-	uLong src_size = (uLong) (bytes);
-	uLong dst_size = compressBound(src_size);
-	unsigned char* dst = (unsigned char*)
-	                     malloc(dst_size*sizeof(unsigned char));
-	if(dst == NULL)
-	{
-		LOGE("malloc failed");
-		goto fail_dst;
-	}
-
-	// compress buffer
-	unsigned char* src = (unsigned char*) self->data;
-	if(compress((Bytef*) dst, (uLongf*) &dst_size,
-	            (const Bytef*) src, src_size) != Z_OK)
-	{
-		LOGE("compress failed");
-		goto fail_compress;
-	}
-
-	// write buffer
-	if(fwrite(dst, sizeof(unsigned char), dst_size, f) != dst_size)
-	{
-		LOGE("fwrite failed");
-		goto fail_fwrite;
-	}
-
-	free(dst);
-	fclose(f);
-
-	// success
-	return 1;
-
-	// failure
-	fail_fwrite:
-	fail_compress:
-		free(dst);
-	fail_dst:
-	fail_header:
-		fclose(f);
-		unlink(fname);
-	return 0;
-}
-
 void terrain_tile_coord(terrain_tile_t* self,
                         int m, int n,
                         double* lat, double* lon)
@@ -556,28 +598,6 @@ void terrain_tile_coord(terrain_tile_t* self,
 
 	terrain_sample2coord(self->x, self->y, self->zoom,
 	                     m, n, lat, lon);
-}
-
-void terrain_tile_set(terrain_tile_t* self,
-                      int m, int n,
-                      short h)
-{
-	assert(self);
-
-	// offset indices by border
-	m += TERRAIN_SAMPLES_BORDER;
-	n += TERRAIN_SAMPLES_BORDER;
-
-	int samples = TERRAIN_SAMPLES_TOTAL;
-	if((m < 0) || (m >= samples) ||
-	   (n < 0) || (n >= samples))
-	{
-		LOGW("invalid m=%i, n=%i", m, n);
-		return;
-	}
-
-	int idx = m*samples + n;
-	self->data[idx] = h;
 }
 
 short terrain_tile_get(terrain_tile_t* self,
@@ -662,22 +682,6 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 			terrain_tile_computeNormal(self, i, j,
 			                           dx, dy, pnx, pny);
 		}
-	}
-}
-
-void terrain_tile_adjustMinMax(terrain_tile_t* self,
-                               short min, short max)
-{
-	assert(self);
-
-	if(min < self->min)
-	{
-		self->min = min;
-	}
-
-	if(max > self->max)
-	{
-		self->max = max;
 	}
 }
 

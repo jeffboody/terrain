@@ -29,6 +29,16 @@
 #include "terrain/terrain_util.h"
 #include "texgz/texgz_tex.h"
 
+// protected function(s)
+extern int terrain_tile_export(terrain_tile_t* self,
+                               const char* base);
+extern void terrain_tile_set(terrain_tile_t* self,
+                             int m, int n,
+                             short h);
+extern void terrain_tile_adjustMinMax(terrain_tile_t* self,
+                                      short min,
+                                      short max);
+
 #define LOG_TAG "subterrain"
 #include "terrain/terrain_log.h"
 

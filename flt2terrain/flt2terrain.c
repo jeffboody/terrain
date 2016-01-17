@@ -28,6 +28,13 @@
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 
+// protected function(s)
+extern int terrain_tile_export(terrain_tile_t* self,
+                               const char* base);
+extern void terrain_tile_set(terrain_tile_t* self,
+                             int m, int n,
+                             short h);
+
 #define LOG_TAG "flt2terrain"
 #include "terrain/terrain_log.h"
 
