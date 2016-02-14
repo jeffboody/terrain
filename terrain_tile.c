@@ -555,21 +555,19 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	return NULL;
 }
 
-int terrain_tile_headerf(FILE* f,
+int terrain_tile_headerb(unsigned char* buffer,
+                         int size,
                          short* min, short* max,
                          int* flags)
 {
-	assert(f);
+	assert(buffer);
 	assert(min);
 	assert(max);
 	assert(flags);
 
-	unsigned char buffer[TERRAIN_HSIZE];
-	int bytes_read = fread(buffer, sizeof(unsigned char),
-	                       TERRAIN_HSIZE, f);
-	if(bytes_read != TERRAIN_HSIZE)
+	if(size < TERRAIN_HSIZE)
 	{
-		LOGE("failed to read header");
+		LOGE("invalid size=%i", size);
 		return 0;
 	}
 
@@ -589,11 +587,28 @@ int terrain_tile_headerf(FILE* f,
 	}
 	else
 	{
-		LOGE("bad magic");
+		LOGE("invalid magic=0x%X", magic);
 		return 0;
 	}
 
 	return 1;
+}
+
+int terrain_tile_headerf(FILE* f,
+                         short* min, short* max,
+                         int* flags)
+{
+	assert(f);
+	assert(min);
+	assert(max);
+	assert(flags);
+
+	unsigned char buffer[TERRAIN_HSIZE];
+	int size = fread(buffer, sizeof(unsigned char),
+	                 TERRAIN_HSIZE, f);
+
+	return terrain_tile_headerb(buffer, size,
+	                            min, max, flags);
 }
 
 void terrain_tile_coord(terrain_tile_t* self,
