@@ -224,6 +224,7 @@ static void terrain_tile_computeNormal(terrain_tile_t* self,
 	short s    = terrain_tile_interpolate(self, u, v + dist);
 	short w    = terrain_tile_interpolate(self, u - dist, v);
 
+#if 1
 	// compute normal from (1,0,dzdx)x(0,1,dzdy).
 	// mask:
 	//        -0.5*n
@@ -233,6 +234,43 @@ static void terrain_tile_computeNormal(terrain_tile_t* self,
 	// normalize dx,dy to 1
 	float dzdx = 0.5f*(e - w);
 	float dzdy = 0.5f*(s - n);
+#else
+	short nw = terrain_tile_interpolate(self, u - dist, v - dist);
+	short ne = terrain_tile_interpolate(self, u + dist, v - dist);
+	short sw = terrain_tile_interpolate(self, u - dist, v + dist);
+	short se = terrain_tile_interpolate(self, u + dist, v + dist);
+
+	// initialize edge masks
+	float mask_x[] =
+	{
+		-1.0f/4.0f, 0.0f, 1.0f/4.0f,
+		-2.0f/4.0f, 0.0f, 2.0f/4.0f,
+		-1.0f/4.0f, 0.0f, 1.0f/4.0f,
+	};
+	float mask_y[] =
+	{
+		-1.0f/4.0f, -2.0f/4.0f, -1.0f/4.0f,
+		      0.0f,       0.0f,       0.0f,
+		 1.0f/4.0f,  2.0f/4.0f,  1.0f/4.0f,
+	};
+
+	// compute dzx, dzy
+	float dzdx;
+	float dzdy;
+	dzdx  = nw*mask_x[0];
+	dzdy  = nw*mask_y[0];
+	dzdy += n*mask_y[1];
+	dzdx += ne*mask_x[2];
+	dzdy += ne*mask_y[2];
+	dzdx += w*mask_x[3];
+	dzdx += e*mask_x[5];
+	dzdx += se*mask_x[6];
+	dzdy += se*mask_y[6];
+	dzdy += s*mask_y[7];
+	dzdx += sw*mask_x[8];
+	dzdy += sw*mask_y[8];
+#endif
+
 	float nx   = -dzdx/dx;
 	float ny   = -dzdy/dy;
 
