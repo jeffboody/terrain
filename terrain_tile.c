@@ -29,6 +29,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <zlib.h>
+#include <math.h>
 #include "terrain_tile.h"
 #include "terrain_util.h"
 
@@ -168,19 +169,19 @@ static short terrain_tile_interpolate(terrain_tile_t* self,
 	float pu = u*(TERRAIN_SAMPLES_TILE - 1);
 	float pv = v*(TERRAIN_SAMPLES_TILE - 1);
 
-	// determine indices to sample
-	int n0 = (int) pu;
-	int m0 = (int) pv;
-	int n1 = n0 + 1;
-	int m1 = m0 + 1;
-
-	// clamp the indices
+	// determine first pair of indices
+	int n0  = floorf(pu);
+	int m0  = floorf(pv);
 	int min = -TERRAIN_SAMPLES_BORDER;
-	int max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER;
-	if(n0 < min)  { n0 = min;     }
-	if(n1 >= max) { n1 = max - 1; }
-	if(m0 < min)  { m0 = min;     }
-	if(m1 >= max) { m1 = max - 1; }
+	if(n0 < min) { n0 = min; }
+	if(m0 < min) { m0 = min; }
+
+	// determine the second pair of indices
+	int n1  = n0 + 1;
+	int m1  = m0 + 1;
+	int max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER - 1;
+	if(n1 > max) { n1 = max; }
+	if(m1 > max) { m1 = max; }
 
 	// sample interpolation values
 	float h00 = (float) terrain_tile_get(self, m0, n0);
@@ -194,12 +195,12 @@ static short terrain_tile_interpolate(terrain_tile_t* self,
 	float s  = pu - s0;
 	float t  = pv - t0;
 
-	// interpolate u
-	float h0010 = h00 + s*(h10 - h00);
-	float h0111 = h01 + s*(h11 - h01);
-
 	// interpolate v
-	return (short) (h0010 + t*(h0111 - h0010) + 0.5f);
+	float h0010 = h00 + t*(h10 - h00);
+	float h0111 = h01 + t*(h11 - h01);
+
+	// interpolate u
+	return (short) (h0010 + s*(h0111 - h0010) + 0.5f);
 }
 
 static void terrain_tile_computeNormal(terrain_tile_t* self,
