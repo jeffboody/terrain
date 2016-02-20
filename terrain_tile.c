@@ -212,17 +212,17 @@ static void terrain_tile_computeNormal(terrain_tile_t* self,
 	assert(pnx);
 	assert(pny);
 
-	// compute the half-sample distance to n/e/s/w samples
-	float samples = (float) (TERRAIN_SAMPLES_NORMAL - 1);
-	float half    = 1.0f/(2.0f*samples);
+	// compute the distance to next sample
+	float dist = 1.0f/(float) TERRAIN_SAMPLES_TILE;
 
 	// interpolate n/e/s/w samples
-	float u = (float) j/samples;
-	float v = (float) i/samples;
-	short n = terrain_tile_interpolate(self, u, v - half);
-	short e = terrain_tile_interpolate(self, u + half, v);
-	short s = terrain_tile_interpolate(self, u, v + half);
-	short w = terrain_tile_interpolate(self, u - half, v);
+	float fmax = (float) (TERRAIN_SAMPLES_NORMAL - 1);
+	float u    = (float) j/fmax;
+	float v    = (float) i/fmax;
+	short n    = terrain_tile_interpolate(self, u, v - dist);
+	short e    = terrain_tile_interpolate(self, u + dist, v);
+	short s    = terrain_tile_interpolate(self, u, v + dist);
+	short w    = terrain_tile_interpolate(self, u - dist, v);
 
 	// compute normal from (1,0,dzdx)x(0,1,dzdy).
 	// mask:
@@ -680,7 +680,7 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 	double lat1;
 	double lon1;
 	terrain_tile_coord(self, 0, 0, &lat0, &lon0);
-	terrain_tile_coord(self, 1, 1, &lat1, &lon1);
+	terrain_tile_coord(self, 2, 2, &lat1, &lon1);
 
 	float  x0;
 	float  y0;
