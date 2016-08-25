@@ -594,6 +594,44 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	return NULL;
 }
 
+int terrain_tile_header(const char* base,
+                        int x, int y, int zoom,
+                        short* min, short* max,
+                        int* flags)
+{
+	assert(base);
+	assert(min);
+	assert(max);
+	assert(flags);
+
+	char fname[256];
+	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+	         base, zoom, x, y);
+	fname[255] = '\0';
+
+	FILE* f = fopen(fname, "r");
+	if(f == NULL)
+	{
+		LOGE("fopen %s failed", fname);
+		return 0;
+	}
+
+	if(terrain_tile_headerf(f, min, max, flags) == 0)
+	{
+		goto fail_header;
+	}
+
+	fclose(f);
+
+	// success
+	return 1;
+
+	// failure
+	fail_header:
+		fclose(f);
+	return 0;
+}
+
 int terrain_tile_headerb(unsigned char* buffer,
                          int size,
                          short* min, short* max,

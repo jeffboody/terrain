@@ -103,6 +103,10 @@ terrain_tile_t* terrain_tile_import(const char* base,
                                     int x, int y, int zoom);
 terrain_tile_t* terrain_tile_importf(FILE* f, int size,
                                      int x, int y, int zoom);
+int             terrain_tile_header(const char* base,
+                                    int x, int y, int zoom,
+                                    short* min, short* max,
+                                    int* flags);
 int             terrain_tile_headerb(unsigned char* buffer,
                                      int size,
                                      short* min, short* max,
