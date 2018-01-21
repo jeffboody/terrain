@@ -119,6 +119,8 @@ void            terrain_tile_coord(terrain_tile_t* self,
                                    double* lat, double* lon);
 short           terrain_tile_get(terrain_tile_t* self,
                                  int m, int n);
+short           terrain_tile_sample(terrain_tile_t* self,
+                                    double lat, double lon);
 void            terrain_tile_getBlock(terrain_tile_t* self,
                                       int blocks,
                                       int r, int c,

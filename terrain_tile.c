@@ -721,6 +721,23 @@ short terrain_tile_get(terrain_tile_t* self,
 	return self->data[idx];
 }
 
+short terrain_tile_sample(terrain_tile_t* self,
+                          double lat, double lon)
+{
+	assert(self);
+
+	float x;
+	float y;
+	terrain_coord2tile(lat, lon, self->zoom, &x, &y);
+
+	float S = (float) TERRAIN_SAMPLES_TILE;
+	float u = x - ((float) self->x);
+	float v = y - ((float) self->y);
+	int   m = (int) (S*v + 0.5f);
+	int   n = (int) (S*u + 0.5f);
+	return terrain_tile_get(self, m, n);
+}
+
 void terrain_tile_getBlock(terrain_tile_t* self,
                            int blocks, int r, int c,
                            short* data)
