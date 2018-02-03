@@ -726,13 +726,21 @@ short terrain_tile_sample(terrain_tile_t* self,
 {
 	assert(self);
 
-	float x;
-	float y;
-	terrain_coord2tile(lat, lon, self->zoom, &x, &y);
-
-	float S = (float) TERRAIN_SAMPLES_TILE;
-	float u = x - ((float) self->x);
-	float v = y - ((float) self->y);
+	// sample in interpolated space
+	float  S    = (float) TERRAIN_SAMPLES_TILE;
+	double lat0 = 0.0;
+	double lon0 = 0.0;
+	double lat1 = 0.0;
+	double lon1 = 0.0;
+	terrain_tile2coord((float) self->x, (float) self->y,
+	                   self->zoom,
+	                   &lat0, &lon0);
+	terrain_tile2coord((float) (self->x + 1),
+	                   (float) (self->y + 1),
+	                   self->zoom,
+	                   &lat1, &lon1);
+	float u = (float) ((lon - lon0)/(lon1 - lon0));
+	float v = (float) ((lat - lat0)/(lat1 - lat0));
 	int   m = (int) (S*v + 0.5f);
 	int   n = (int) (S*u + 0.5f);
 	return terrain_tile_get(self, m, n);
