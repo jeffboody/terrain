@@ -581,6 +581,8 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	self->y    = y;
 	self->zoom = zoom;
 
+	free(src);
+
 	// success
 	return self;
 
