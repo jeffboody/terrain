@@ -33,6 +33,8 @@ void  terrain_coord2tile(double lat, double lon, int zoom,
                          float* x, float* y);
 void  terrain_coord2xy(double lat, double lon,
                        float* x, float* y);
+void  terrain_xy2coord(float x, float y,
+                       double* lat, double* lon);
 float terrain_m2ft(float m);
 float terrain_ft2m(float f);
 

@@ -104,6 +104,25 @@ void terrain_coord2xy(double lat, double lon,
 	*y = (float) ((lat - home_lat)*lat2meter);
 }
 
+void terrain_xy2coord(float x, float y,
+                      double* lat, double* lon)
+{
+	assert(lat);
+	assert(lon);
+	LOGD("debug x=%f, y=%f", x, y);
+
+	// use home as the origin
+	double lat2meter = 111072.12110934;
+	double lon2meter = 85337.868965619;
+	double home_lat  = 40.061295;
+	double home_lon  =-105.214552;
+
+	double xd = (double) x;
+	double yd = (double) y;
+	*lat = (yd/lat2meter) + home_lat;
+	*lon = (xd/lon2meter) + home_lon;
+}
+
 float terrain_m2ft(float m)
 {
 	return m*5280.0f/1609.344f;
