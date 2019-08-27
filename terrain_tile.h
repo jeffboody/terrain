@@ -125,6 +125,10 @@ void            terrain_tile_getBlock(terrain_tile_t* self,
                                       int blocks,
                                       int r, int c,
                                       short* data);
+void            terrain_tile_getBlockf(terrain_tile_t* self,
+                                       int blocks,
+                                       int r, int c,
+                                       float* data);
 void            terrain_tile_getNormalMap(terrain_tile_t* self,
                                           unsigned char* data);
 int             terrain_tile_tl(terrain_tile_t* self);

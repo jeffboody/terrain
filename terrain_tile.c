@@ -772,6 +772,30 @@ void terrain_tile_getBlock(terrain_tile_t* self,
 	}
 }
 
+void terrain_tile_getBlockf(terrain_tile_t* self,
+                            int blocks, int r, int c,
+                            float* data)
+{
+	assert(self);
+	assert(data);
+	assert(((TERRAIN_SAMPLES_TILE - 1) % blocks) == 0);
+
+	int m;
+	int n;
+	int step = (TERRAIN_SAMPLES_TILE - 1)/blocks;
+	int size = step + 1;
+	for(m = 0; m < size; ++m)
+	{
+		for(n = 0; n < size; ++n)
+		{
+			int mm = step*r + m;
+			int nn = step*c + n;
+			data[size*m + n] = (float) terrain_tile_get(self,
+			                                            mm, nn);
+		}
+	}
+}
+
 void terrain_tile_getNormalMap(terrain_tile_t* self,
                                unsigned char* data)
 {
