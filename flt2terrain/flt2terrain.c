@@ -51,9 +51,10 @@ static flt_tile_t* flt_bl = NULL;
 static flt_tile_t* flt_bc = NULL;
 static flt_tile_t* flt_br = NULL;
 
-static int sample_tile(int x, int y, int zoom)
+static int
+sample_tile(int x, int y, int zoom, const char* output)
 {
-	LOGD("debug");
+	assert(output);
 
 	terrain_tile_t* ter;
 	ter = terrain_tile_new(x, y, zoom);
@@ -93,7 +94,7 @@ static int sample_tile(int x, int y, int zoom)
 		}
 	}
 
-	if(terrain_tile_export(ter, ".") == 0)
+	if(terrain_tile_export(ter, output) == 0)
 	{
 		goto fail_export;
 	}
@@ -109,9 +110,11 @@ static int sample_tile(int x, int y, int zoom)
 	return 0;
 }
 
-static int sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
+static int
+sample_tile_range(int x0, int y0, int x1, int y1, int zoom,
+                  const char* output)
 {
-	LOGD("debug x0=%i, y0=%i, x1=%i, y1=%i, zoom=%i", x0, y0, x1, y1, zoom);
+	assert(output);
 
 	// sample tiles whose origin should be in flt_cc
 	int x;
@@ -120,7 +123,7 @@ static int sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 	{
 		for(x = x0; x <= x1; ++x)
 		{
-			if(sample_tile(x, y, zoom) == 0)
+			if(sample_tile(x, y, zoom, output) == 0)
 			{
 				return 0;
 			}
@@ -134,16 +137,17 @@ int main(int argc, char** argv)
 {
 	if(argc != 7)
 	{
-		LOGE("usage: %s [arcs] [zoom] [latT] [lonL] [latB] [lonR]", argv[0]);
+		LOGE("usage: %s [zoom] [latT] [lonL] [latB] [lonR] [output]", argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	int arcs = (int) strtol(argv[1], NULL, 0);
-	int zoom = (int) strtol(argv[2], NULL, 0);
-	int latT = (int) strtol(argv[3], NULL, 0);
-	int lonL = (int) strtol(argv[4], NULL, 0);
-	int latB = (int) strtol(argv[5], NULL, 0);
-	int lonR = (int) strtol(argv[6], NULL, 0);
+	int zoom = (int) strtol(argv[1], NULL, 0);
+	int latT = (int) strtol(argv[2], NULL, 0);
+	int lonL = (int) strtol(argv[3], NULL, 0);
+	int latB = (int) strtol(argv[4], NULL, 0);
+	int lonR = (int) strtol(argv[5], NULL, 0);
+
+	const char* output = argv[6];
 
 	int lati;
 	int lonj;
@@ -155,44 +159,44 @@ int main(int argc, char** argv)
 		{
 			// status message
 			++idx;
-			LOGI("%i/%i", idx, count);
+			LOGI("%i/%i: lat=%i, lon=%i", idx, count, lati, lonj);
 
 			// initialize flt data
 			if(flt_tl == NULL)
 			{
-				flt_tl = flt_tile_import(arcs, lati + 1, lonj - 1);
+				flt_tl = flt_tile_import(lati + 1, lonj - 1);
 			}
 			if(flt_tc == NULL)
 			{
-				flt_tc = flt_tile_import(arcs, lati + 1, lonj);
+				flt_tc = flt_tile_import(lati + 1, lonj);
 			}
 			if(flt_tr == NULL)
 			{
-				flt_tr = flt_tile_import(arcs, lati + 1, lonj + 1);
+				flt_tr = flt_tile_import(lati + 1, lonj + 1);
 			}
 			if(flt_cl == NULL)
 			{
-				flt_cl = flt_tile_import(arcs, lati, lonj - 1);
+				flt_cl = flt_tile_import(lati, lonj - 1);
 			}
 			if(flt_cc == NULL)
 			{
-				flt_cc = flt_tile_import(arcs, lati, lonj);
+				flt_cc = flt_tile_import(lati, lonj);
 			}
 			if(flt_cr == NULL)
 			{
-				flt_cr = flt_tile_import(arcs, lati, lonj + 1);
+				flt_cr = flt_tile_import(lati, lonj + 1);
 			}
 			if(flt_bl == NULL)
 			{
-				flt_bl = flt_tile_import(arcs, lati - 1, lonj - 1);
+				flt_bl = flt_tile_import(lati - 1, lonj - 1);
 			}
 			if(flt_bc == NULL)
 			{
-				flt_bc = flt_tile_import(arcs, lati - 1, lonj);
+				flt_bc = flt_tile_import(lati - 1, lonj);
 			}
 			if(flt_br == NULL)
 			{
-				flt_br = flt_tile_import(arcs, lati - 1, lonj + 1);
+				flt_br = flt_tile_import(lati - 1, lonj + 1);
 			}
 
 			// flt_cc may be NULL for sparse data
@@ -255,7 +259,7 @@ int main(int argc, char** argv)
 				// sample the set of tiles whose origin should cover flt_cc
 				// again, due to overlap with other flt tiles the sampling
 				// actually occurs over the entire flt_xx set
-				if(sample_tile_range(x0, y0, x1, y1, zoom) == 0)
+				if(sample_tile_range(x0, y0, x1, y1, zoom, output) == 0)
 				{
 					goto fail_sample;
 				}

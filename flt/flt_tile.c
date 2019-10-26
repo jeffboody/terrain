@@ -21,10 +21,15 @@
  *
  */
 
-#include <stdlib.h>
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <tiffio.h>
+#include <unistd.h>
+
+#include "../../libxmlstream/xml_istream.h"
 #include "flt_tile.h"
 
 #define LOG_TAG "flt"
@@ -44,7 +49,6 @@ static int keyval(char* s, const char** k, const char** v)
 	assert(s);
 	assert(k);
 	assert(v);
-	LOGD("debug s=%s", s);
 
 	// find key
 	*k = s;
@@ -94,12 +98,17 @@ static int flt_tile_importhdr(flt_tile_t* self, const char* fname)
 {
 	assert(self);
 	assert(fname);
-	LOGD("debug fname=%s", fname);
+
+	// ignore if file does not exist
+	if(access(fname, F_OK) != 0)
+	{
+		return 0;
+	}
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
 	{
-		// skip silently
+		LOGE("fopen %s failed", fname);
 		return 0;
 	}
 
@@ -191,7 +200,6 @@ static int flt_tile_importprj(flt_tile_t* self, const char* fname)
 {
 	assert(self);
 	assert(fname);
-	LOGD("debug fname=%s", fname);
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
@@ -279,7 +287,6 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 {
 	assert(self);
 	assert(fname);
-	LOGD("debug fname=%s", fname);
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
@@ -339,7 +346,8 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 
 				// convert data to feet
 				float* height = (float*) &data[4*i];
-				self->height[row*self->ncols + i] = (short) (meters2feet(*height) + 0.5f);
+				self->height[row*self->ncols + i] = (short)
+				                                    (meters2feet(*height) + 0.5f);
 			}
 		}
 		else
@@ -349,7 +357,8 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 			{
 				// convert data to feet
 				float* height = (float*) &data[4*i];
-				self->height[row*self->ncols + i] = (short) (meters2feet(*height) + 0.5f);
+				self->height[row*self->ncols + i] = (short)
+				                                    (meters2feet(*height) + 0.5f);
 			}
 		}
 	}
@@ -371,25 +380,208 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 	return 0;
 }
 
+static int
+flt_tile_importtif(flt_tile_t* self, const char* fname)
+{
+	assert(self);
+	assert(fname);
+
+	// ASTER v3
+	// https://lpdaac.usgs.gov/products/astgtmv003/
+
+	// ignore if file does not exist
+	if(access(fname, F_OK) != 0)
+	{
+		return 0;
+	}
+
+	TIFF *tiff = TIFFOpen(fname, "r");
+	if(tiff == NULL)
+	{
+		LOGE("TIFFOpen failed");
+		return 0;
+	}
+
+	uint32_t w;
+	uint32_t h;
+	uint32_t tw;
+	uint32_t th;
+	uint16_t samples;
+	uint16_t bits;
+	uint16_t format;
+	TIFFGetField(tiff, TIFFTAG_IMAGEWIDTH, &w);
+	TIFFGetField(tiff, TIFFTAG_IMAGELENGTH, &h);
+	TIFFGetField(tiff, TIFFTAG_SAMPLESPERPIXEL, &samples);
+	TIFFGetField(tiff, TIFFTAG_BITSPERSAMPLE, &bits);
+	TIFFGetField(tiff, TIFFTAG_SAMPLEFORMAT, &format);
+	TIFFGetField(tiff, TIFFTAG_TILEWIDTH, &tw);
+	TIFFGetField(tiff, TIFFTAG_TILELENGTH, &th);
+
+	if((samples != 1) || (bits != 16) ||
+	   (format != SAMPLEFORMAT_INT))
+	{
+		LOGE("invalid params");
+		goto fail_param;
+	}
+
+	short* tile = (short*) malloc(tw*th*sizeof(short));
+	if(tile == NULL)
+	{
+		LOGE("malloc failed");
+		goto fail_tile;
+	}
+
+	self->height = (short*) malloc(w*h*sizeof(short));
+	if(self->height == NULL)
+	{
+		LOGE("malloc failed");
+		goto fail_height;
+	}
+
+	// read tiles
+	int i;
+	int j;
+	int m;
+	int n;
+	for(i = 0; i < h; i += th)
+	{
+		for(j = 0; j < w; j += tw)
+		{
+			TIFFReadTile(tiff, tile, j, i, 0, 0);
+
+			// untile data and convert to feet
+			for(m = 0; m < th; ++m)
+			{
+				if(i + m >= h)
+				{
+					break;
+				}
+
+				for(n = 0; n < tw; ++n)
+				{
+					if(j + n >= w)
+					{
+						break;
+					}
+
+					// ignore nodata values
+					short t = tile[m*tw + n];
+					if(t == -9999)
+					{
+						t = 0;
+					}
+
+					self->height[(i+m)*w + j + n] = (short)
+					                                (meters2feet((float) t) + 0.5f);
+				}
+			}
+		}
+	}
+
+	self->nrows = h;
+	self->ncols = w;
+
+	free(tile);
+	TIFFClose(tiff);
+
+	// success
+	return 1;
+
+	// failure
+	fail_height:
+		free(tile);
+	fail_tile:
+	fail_param:
+		TIFFClose(tiff);
+	return 0;
+}
+
+static int
+flt_tile_xmlStart(void* priv, int line, const char* name,
+                  const char** atts)
+{
+	// ignore
+	return 1;
+}
+
+static int
+flt_tile_xmlEnd(void* priv, int line, const char* name,
+                const char* content)
+{
+	// content may be NULL
+	assert(priv);
+	assert(name);
+
+	flt_tile_t* self = (flt_tile_t*) priv;
+
+	if(strcmp(name, "NorthBoundingCoordinate") == 0)
+	{
+		if(content == NULL)
+		{
+			goto fail_content;
+		}
+		self->latT = strtod(content, NULL);
+	}
+	else if(strcmp(name, "WestBoundingCoordinate") == 0)
+	{
+		if(content == NULL)
+		{
+			goto fail_content;
+		}
+		self->lonL = strtod(content, NULL);
+	}
+	else if(strcmp(name, "SouthBoundingCoordinate") == 0)
+	{
+		if(content == NULL)
+		{
+			goto fail_content;
+		}
+		self->latB = strtod(content, NULL);
+	}
+	else if(strcmp(name, "EastBoundingCoordinate") == 0)
+	{
+		if(content == NULL)
+		{
+			goto fail_content;
+		}
+		self->lonR = strtod(content, NULL);
+	}
+
+	// success
+	return 1;
+
+	// failure
+	fail_content:
+		LOGE("%i/%i: content is NULL", self->lat, self->lon);
+	return 0;
+}
+
 /***********************************************************
 * public                                                   *
 ***********************************************************/
 
-flt_tile_t* flt_tile_import(int arcs, int lat, int lon)
+flt_tile_t* flt_tile_import(int lat, int lon)
 {
-	LOGD("debug arcs=%i, lat=%i, lon=%i", arcs, lat, lon);
-
 	char flt_fbase[256];
 	char flt_fname[256];
 	char hdr_fname[256];
 	char prj_fname[256];
+	char tif_fname[256];
+	char xml_fname[256];
 
 	snprintf(flt_fbase, 256, "%s%i%s%03i",
 	         (lat >= 0) ? "n" : "s", abs(lat),
 	         (lon >= 0) ? "e" : "w", abs(lon));
-	snprintf(flt_fname, 256, "%s/float%s_%i", flt_fbase, flt_fbase, arcs);
+	snprintf(flt_fname, 256, "usgs-ned/data/%s/float%s_13",
+	         flt_fbase, flt_fbase);
 	snprintf(hdr_fname, 256, "%s.hdr", flt_fname);
 	snprintf(prj_fname, 256, "%s.prj", flt_fname);
+	snprintf(tif_fname, 256, "ASTERv3/data/ASTGTMV003_%s%02i%s%03i_dem.tif",
+	         (lat >= 0) ? "N" : "S", abs(lat),
+	         (lon >= 0) ? "E" : "W", abs(lon));
+	snprintf(xml_fname, 256, "ASTERv3/zip/ASTGTMV003_%s%02i%s%03i.zip.xml",
+	         (lat >= 0) ? "N" : "S", abs(lat),
+	         (lon >= 0) ? "E" : "W", abs(lon));
 
 	flt_tile_t* self = (flt_tile_t*) malloc(sizeof(flt_tile_t));
 	if(self == NULL)
@@ -401,24 +593,42 @@ flt_tile_t* flt_tile_import(int arcs, int lat, int lon)
 	// init defaults
 	self->lat       = lat;
 	self->lon       = lon;
-	self->lonL      = 0.0;
-	self->latB      = 0.0;
-	self->lonR      = 0.0;
-	self->latT      = 0.0;
+	self->lonL      = (double) lon;
+	self->latB      = (double) lat;
+	self->lonR      = (double) lon + 1.0;
+	self->latT      = (double) lat + 1.0;
 	self->nodata    = 0.0;
 	self->byteorder = FLT_LSBFIRST;
 	self->nrows     = 0;
 	self->ncols     = 0;
 	self->height    = NULL;
 
+	// import flt/tif files but prefer flt files since
+	// they are higher resolution
 	if(flt_tile_importhdr(self, hdr_fname) == 0)
 	{
-		// silently fail if hdr does not exist
-		// but if hdr exists then prj and flt
-		// must also exist
+		if(flt_tile_importtif(self, tif_fname))
+		{
+			// parse extent
+			if(xml_istream_parse((void*) self,
+			                     flt_tile_xmlStart,
+			                     flt_tile_xmlEnd,
+			                     xml_fname) == 0)
+			{
+				LOGE("invalid %s", xml_fname);
+				goto fail_xml;
+			}
+
+			// success
+			return self;
+		}
+
+		// silently fail if hdr/tif fail
 		goto fail_hdr;
 	}
 
+	// if hdr exists then prj and flt
+	// must also exist
 	if(flt_tile_importprj(self, prj_fname) == 0)
 	{
 		LOGE("flt_tile_importprj %s failed", prj_fname);
@@ -428,7 +638,8 @@ flt_tile_t* flt_tile_import(int arcs, int lat, int lon)
 	if(flt_tile_importflt(self, flt_fname) == 0)
 	{
 		// filenames in source files are inconsistent
-		snprintf(flt_fname, 256, "%s/float%s_%i.flt", flt_fbase, flt_fbase, arcs);
+		snprintf(flt_fname, 256, "usgs-ned/data/%s/float%s_13.flt",
+		         flt_fbase, flt_fbase);
 		if(flt_tile_importflt(self, flt_fname) == 0)
 		{
 			LOGE("flt_tile_importflt %s failed", flt_fname);
@@ -443,6 +654,7 @@ flt_tile_t* flt_tile_import(int arcs, int lat, int lon)
 	fail_flt:
 	fail_prj:
 	fail_hdr:
+	fail_xml:
 		free(self);
 	return NULL;
 }
@@ -454,8 +666,6 @@ void flt_tile_delete(flt_tile_t** _self)
 	flt_tile_t* self = *_self;
 	if(self)
 	{
-		LOGD("debug");
-
 		free(self->height);
 		free(self);
 		*_self = NULL;
@@ -468,7 +678,6 @@ int flt_tile_sample(flt_tile_t* self,
 {
 	assert(self);
 	assert(height);
-	LOGD("debug lat=%lf, lon=%lf", lat, lon);
 
 	double lonu = (lon - self->lonL) / (self->lonR - self->lonL);
 	double latv = 1.0 - ((lat - self->latB) / (self->latT - self->latB));
