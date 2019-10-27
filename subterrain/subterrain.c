@@ -503,9 +503,9 @@ int main(int argc, char** argv)
 	}
 
 	int zoom = (int) strtol(argv[1], NULL, 0);
-	int latT = (int) strtol(argv[2], NULL, 0);
+	int latT = (int) strtol(argv[2], NULL, 0) + 1;
 	int lonL = (int) strtol(argv[3], NULL, 0);
-	int latB = (int) strtol(argv[4], NULL, 0) - 1;
+	int latB = (int) strtol(argv[4], NULL, 0);
 	int lonR = (int) strtol(argv[5], NULL, 0) + 1;
 
 	// determine tile range
