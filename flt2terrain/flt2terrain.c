@@ -74,15 +74,23 @@ sample_tile(int x, int y, int zoom, const char* output)
 
 	int m;
 	int n;
-	int min = -TERRAIN_SAMPLES_BORDER;
-	int max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER;
+	double latT;
+	double lonL;
+	double latB;
+	double lonR;
+	int    min = -TERRAIN_SAMPLES_BORDER;
+	int    max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER;
+	double d   = (double) (max - min - 1);
+	terrain_tile_coord(ter, min, min, &latT, &lonL);
+	terrain_tile_coord(ter, max - 1, max - 1, &latB, &lonR);
 	for(m = min; m < max; ++m)
 	{
 		for(n = min; n < max; ++n)
 		{
-			double lat;
-			double lon;
-			terrain_tile_coord(ter, m, n, &lat, &lon);
+			double u   = ((double) (n - min))/d;
+			double v   = ((double) (m - min))/d;
+			double lat = latT + v*(latB - latT);
+			double lon = lonL + u*(lonR - lonL);
 
 			// flt_cc most likely place to find sample
 			// At edges of range a tile may not be

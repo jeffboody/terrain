@@ -409,15 +409,17 @@ void terrain_tile_set(terrain_tile_t* self,
 	m += TERRAIN_SAMPLES_BORDER;
 	n += TERRAIN_SAMPLES_BORDER;
 
-	int samples = TERRAIN_SAMPLES_TOTAL;
-	if((m < 0) || (m >= samples) ||
-	   (n < 0) || (n >= samples))
-	{
-		LOGW("invalid m=%i, n=%i", m, n);
-		return;
-	}
+	const int S = TERRAIN_SAMPLES_TOTAL;
+	#if 0
+		if((m < 0) || (m >= S) ||
+		   (n < 0) || (n >= S))
+		{
+			LOGW("invalid m=%i, n=%i", m, n);
+			return;
+		}
+	#endif
 
-	int idx = m*samples + n;
+	int idx = m*S + n;
 	self->data[idx] = h;
 }
 
