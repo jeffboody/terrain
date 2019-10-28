@@ -22,10 +22,15 @@
  */
 
 #include <sys/time.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
+
+#define LOG_TAG "flt2terrain"
 #include "flt/flt_tile.h"
+#include "libcc/cc_log.h"
+#include "libcc/cc_timestamp.h"
+#include "libcc/cc_workq.h"
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 
@@ -35,9 +40,6 @@ extern int terrain_tile_export(terrain_tile_t* self,
 extern void terrain_tile_set(terrain_tile_t* self,
                              int m, int n,
                              short h);
-
-#define LOG_TAG "flt2terrain"
-#include "terrain/terrain_log.h"
 
 // flt_cc is centered on the current tile being sampled
 // load neighboring flt tiles since they may overlap
@@ -52,25 +54,16 @@ static flt_tile_t* flt_bl = NULL;
 static flt_tile_t* flt_bc = NULL;
 static flt_tile_t* flt_br = NULL;
 
-static double cc_timestamp(void)
-{
-	struct timeval t;
-	gettimeofday(&t, NULL);
-	return (double) t.tv_sec +
-	       ((double) t.tv_usec)/1000000.0;
-}
+static const char* output = NULL;
+static cc_workq_t* workq  = NULL;
+static int         error  = 0;
 
 static int
-sample_tile(int x, int y, int zoom, const char* output)
+sample_tile_run(int tid, void* owner, void* task)
 {
-	assert(output);
+	assert(task);
 
-	terrain_tile_t* ter;
-	ter = terrain_tile_new(x, y, zoom);
-	if(ter == NULL)
-	{
-		return 0;
-	}
+	terrain_tile_t* ter = (terrain_tile_t*) task;
 
 	int m;
 	int n;
@@ -113,26 +106,32 @@ sample_tile(int x, int y, int zoom, const char* output)
 
 	if(terrain_tile_export(ter, output) == 0)
 	{
-		goto fail_export;
+		return 0;
+	}
+
+	return 1;
+}
+
+static void
+sample_tile_finish(void* owner, void* task, int status)
+{
+	assert(task);
+
+	terrain_tile_t* ter = (terrain_tile_t*) task;
+
+	if(status != CC_WORKQ_STATUS_COMPLETE)
+	{
+		LOGE("%i/%i/%i: error",
+		     ter->zoom, ter->x, ter->y);
+		error = 1;
 	}
 
 	terrain_tile_delete(&ter);
-
-	// success
-	return 1;
-
-	// failure
-	fail_export:
-		terrain_tile_delete(&ter);
-	return 0;
 }
 
 static int
-sample_tile_range(int x0, int y0, int x1, int y1, int zoom,
-                  const char* output)
+sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 {
-	assert(output);
-
 	// sample tiles whose origin should be in flt_cc
 	int x;
 	int y;
@@ -140,21 +139,32 @@ sample_tile_range(int x0, int y0, int x1, int y1, int zoom,
 	{
 		for(x = x0; x <= x1; ++x)
 		{
-			if(sample_tile(x, y, zoom, output) == 0)
+			terrain_tile_t* ter;
+			ter = terrain_tile_new(x, y, zoom);
+			if(ter == NULL)
 			{
+				return 0;
+			}
+
+			if(cc_workq_run(workq, (void*) ter, 0) ==
+			   CC_WORKQ_STATUS_ERROR)
+			{
+				terrain_tile_delete(&ter);
 				return 0;
 			}
 		}
 	}
 
-	return 1;
+	cc_workq_finish(workq);
+	return error ? 0 : 1;
 }
 
 int main(int argc, char** argv)
 {
 	if(argc != 7)
 	{
-		LOGE("usage: %s [zoom] [latT] [lonL] [latB] [lonR] [output]", argv[0]);
+		LOGE("usage: %s [zoom] [latT] [lonL] [latB] [lonR] [output]",
+		     argv[0]);
 		return EXIT_FAILURE;
 	}
 
@@ -164,7 +174,16 @@ int main(int argc, char** argv)
 	int latB = (int) strtol(argv[4], NULL, 0);
 	int lonR = (int) strtol(argv[5], NULL, 0);
 
-	const char* output = argv[6];
+	// initialize output path
+	output = argv[6];
+
+	// initialize workq
+	workq = cc_workq_new(NULL, 4, sample_tile_run,
+	                     sample_tile_finish);
+	if(workq == NULL)
+	{
+		return EXIT_FAILURE;
+	}
 
 	double t0 = cc_timestamp();
 	double t1 = cc_timestamp();
@@ -283,7 +302,7 @@ int main(int argc, char** argv)
 				// sample the set of tiles whose origin should cover flt_cc
 				// again, due to overlap with other flt tiles the sampling
 				// actually occurs over the entire flt_xx set
-				if(sample_tile_range(x0, y0, x1, y1, zoom, output) == 0)
+				if(sample_tile_range(x0, y0, x1, y1, zoom) == 0)
 				{
 					goto fail_sample;
 				}
@@ -316,13 +335,15 @@ int main(int argc, char** argv)
 		flt_tile_delete(&flt_br);
 	}
 
-	LOGI("dt=%lf", cc_timestamp() - t0);
+	cc_workq_delete(&workq);
 
 	// success
+	LOGI("SUCCESS: dt=%lf", cc_timestamp() - t0);
 	return EXIT_SUCCESS;
 
 	// failure
 	fail_sample:
+		cc_workq_finish(workq);
 		flt_tile_delete(&flt_tl);
 		flt_tile_delete(&flt_cl);
 		flt_tile_delete(&flt_bl);
@@ -332,5 +353,7 @@ int main(int argc, char** argv)
 		flt_tile_delete(&flt_tr);
 		flt_tile_delete(&flt_cr);
 		flt_tile_delete(&flt_br);
+		cc_workq_delete(&workq);
+		LOGE("FAILURE: dt=%lf", cc_timestamp() - t0);
 	return EXIT_FAILURE;
 }
