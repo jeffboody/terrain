@@ -21,6 +21,7 @@
  *
  */
 
+#include <sys/time.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <math.h>
@@ -50,6 +51,14 @@ static flt_tile_t* flt_cr = NULL;
 static flt_tile_t* flt_bl = NULL;
 static flt_tile_t* flt_bc = NULL;
 static flt_tile_t* flt_br = NULL;
+
+static double cc_timestamp(void)
+{
+	struct timeval t;
+	gettimeofday(&t, NULL);
+	return (double) t.tv_sec +
+	       ((double) t.tv_usec)/1000000.0;
+}
 
 static int
 sample_tile(int x, int y, int zoom, const char* output)
@@ -149,6 +158,10 @@ int main(int argc, char** argv)
 
 	const char* output = argv[6];
 
+	double t0 = cc_timestamp();
+	double t1 = cc_timestamp();
+	double t2 = cc_timestamp();
+
 	int lati;
 	int lonj;
 	int idx   = 0;
@@ -159,7 +172,10 @@ int main(int argc, char** argv)
 		{
 			// status message
 			++idx;
-			LOGI("%i/%i: lat=%i, lon=%i", idx, count, lati, lonj);
+			t2 = cc_timestamp();
+			LOGI("%i/%i/%lf/%lf: lat=%i, lon=%i",
+			     idx, count, t2 - t0, t2 - t1, lati, lonj);
+			t1 = t2;
 
 			// initialize flt data
 			if(flt_tl == NULL)
@@ -291,6 +307,8 @@ int main(int argc, char** argv)
 		flt_tile_delete(&flt_cr);
 		flt_tile_delete(&flt_br);
 	}
+
+	LOGI("dt=%lf", cc_timestamp() - t0);
 
 	// success
 	return EXIT_SUCCESS;
