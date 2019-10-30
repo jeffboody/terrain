@@ -560,8 +560,9 @@ flt_tile_xmlEnd(void* priv, int line, const char* name,
 * public                                                   *
 ***********************************************************/
 
-flt_tile_t* flt_tile_import(int lat, int lon)
+flt_tile_t* flt_tile_import(int zoom, int lat, int lon, int center)
 {
+	assert((zoom == 15) || (zoom == 13));
 	char flt_fbase[256];
 	char flt_fname[256];
 	char hdr_fname[256];
@@ -603,9 +604,35 @@ flt_tile_t* flt_tile_import(int lat, int lon)
 	self->ncols     = 0;
 	self->height    = NULL;
 
-	// import flt/tif files but prefer flt files since
-	// they are higher resolution
-	if(flt_tile_importhdr(self, hdr_fname) == 0)
+	if(zoom == 15)
+	{
+		// import flt/tif files but prefer flt files since
+		// they are higher resolution
+		if(flt_tile_importhdr(self, hdr_fname) == 0)
+		{
+			// only import ASTERv3 for boundary tiles
+			if((center == 0) &&
+			   flt_tile_importtif(self, tif_fname))
+			{
+				// parse extent
+				if(xml_istream_parse((void*) self,
+				                     flt_tile_xmlStart,
+				                     flt_tile_xmlEnd,
+				                     xml_fname) == 0)
+				{
+					LOGE("invalid %s", xml_fname);
+					goto fail_xml;
+				}
+
+				// success
+				return self;
+			}
+
+			// silently fail if hdr/tif fail
+			goto fail_hdr;
+		}
+	}
+	else
 	{
 		if(flt_tile_importtif(self, tif_fname))
 		{

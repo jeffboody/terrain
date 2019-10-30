@@ -58,12 +58,57 @@ static const char* output = NULL;
 static cc_workq_t* workq  = NULL;
 static int         error  = 0;
 
+typedef struct
+{
+	int zoom;
+	int x;
+	int y;
+} tile_job_t;
+
+static tile_job_t*
+tile_job_new(int zoom, int x, int y)
+{
+	tile_job_t* self;
+	self = (tile_job_t*) malloc(sizeof(tile_job_t));
+	if(self == NULL)
+	{
+		LOGE("malloc failed");
+		return NULL;
+	}
+
+	self->zoom = zoom;
+	self->x    = x;
+	self->y    = y;
+
+	return self;
+}
+
+static void
+tile_job_delete(tile_job_t** _self)
+{
+	assert(_self);
+
+	tile_job_t* self = *_self;
+	if(self)
+	{
+		free(self);
+		*_self = NULL;
+	}
+}
+
 static int
 sample_tile_run(int tid, void* owner, void* task)
 {
 	assert(task);
 
-	terrain_tile_t* ter = (terrain_tile_t*) task;
+	tile_job_t* job = (tile_job_t*) task;
+
+	terrain_tile_t* ter;
+	ter = terrain_tile_new(job->x, job->y, job->zoom);
+	if(ter == NULL)
+	{
+		return 0;
+	}
 
 	int m;
 	int n;
@@ -106,10 +151,18 @@ sample_tile_run(int tid, void* owner, void* task)
 
 	if(terrain_tile_export(ter, output) == 0)
 	{
-		return 0;
+		goto fail_export;
 	}
 
+	terrain_tile_delete(&ter);
+
+	// success
 	return 1;
+
+	// failure
+	fail_export:
+		terrain_tile_delete(&ter);
+	return 0;
 }
 
 static void
@@ -117,16 +170,16 @@ sample_tile_finish(void* owner, void* task, int status)
 {
 	assert(task);
 
-	terrain_tile_t* ter = (terrain_tile_t*) task;
+	tile_job_t* job = (tile_job_t*) task;
 
 	if(status != CC_WORKQ_STATUS_COMPLETE)
 	{
 		LOGE("%i/%i/%i: error",
-		     ter->zoom, ter->x, ter->y);
+		     job->zoom, job->x, job->y);
 		error = 1;
 	}
 
-	terrain_tile_delete(&ter);
+	tile_job_delete(&job);
 }
 
 static int
@@ -139,17 +192,17 @@ sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 	{
 		for(x = x0; x <= x1; ++x)
 		{
-			terrain_tile_t* ter;
-			ter = terrain_tile_new(x, y, zoom);
-			if(ter == NULL)
+			tile_job_t* job;
+			job = tile_job_new(zoom, x, y);
+			if(job == NULL)
 			{
 				return 0;
 			}
 
-			if(cc_workq_run(workq, (void*) ter, 0) ==
+			if(cc_workq_run(workq, (void*) job, 0) ==
 			   CC_WORKQ_STATUS_ERROR)
 			{
-				terrain_tile_delete(&ter);
+				tile_job_delete(&job);
 				return 0;
 			}
 		}
@@ -176,6 +229,17 @@ int main(int argc, char** argv)
 
 	// initialize output path
 	output = argv[6];
+
+	// check for supported zoom levels
+	if((zoom == 15) || (zoom == 13))
+	{
+		// continue
+	}
+	else
+	{
+		LOGE("zoom must be 15 (usgs-ned + ASTERv3) or 13 (ASTERv3)");
+		return EXIT_FAILURE;
+	}
 
 	// initialize workq
 	workq = cc_workq_new(NULL, 4, sample_tile_run,
@@ -204,60 +268,65 @@ int main(int argc, char** argv)
 			     idx, count, t2 - t0, t2 - t1, lati, lonj);
 			t1 = t2;
 
-			// initialize flt data
-			if(flt_tl == NULL)
-			{
-				flt_tl = flt_tile_import(lati + 1, lonj - 1);
-			}
-			if(flt_tc == NULL)
-			{
-				flt_tc = flt_tile_import(lati + 1, lonj);
-			}
-			if(flt_tr == NULL)
-			{
-				flt_tr = flt_tile_import(lati + 1, lonj + 1);
-			}
-			if(flt_cl == NULL)
-			{
-				flt_cl = flt_tile_import(lati, lonj - 1);
-			}
+			// initialize flt center
 			if(flt_cc == NULL)
 			{
-				flt_cc = flt_tile_import(lati, lonj);
-			}
-			if(flt_cr == NULL)
-			{
-				flt_cr = flt_tile_import(lati, lonj + 1);
-			}
-			if(flt_bl == NULL)
-			{
-				flt_bl = flt_tile_import(lati - 1, lonj - 1);
-			}
-			if(flt_bc == NULL)
-			{
-				flt_bc = flt_tile_import(lati - 1, lonj);
-			}
-			if(flt_br == NULL)
-			{
-				flt_br = flt_tile_import(lati - 1, lonj + 1);
+				flt_cc = flt_tile_import(zoom, lati, lonj, 1);
 			}
 
 			// flt_cc may be NULL for sparse data
 			if(flt_cc)
 			{
-				// sample tiles whose origin should be in flt_cc
+				// initialize flt boundary
+				if(flt_tl == NULL)
+				{
+					flt_tl = flt_tile_import(zoom, lati + 1, lonj - 1, 0);
+				}
+				if(flt_tc == NULL)
+				{
+					flt_tc = flt_tile_import(zoom, lati + 1, lonj, 0);
+				}
+				if(flt_tr == NULL)
+				{
+					flt_tr = flt_tile_import(zoom, lati + 1, lonj + 1, 0);
+				}
+				if(flt_cl == NULL)
+				{
+					flt_cl = flt_tile_import(zoom, lati, lonj - 1, 0);
+				}
+				if(flt_cr == NULL)
+				{
+					flt_cr = flt_tile_import(zoom, lati, lonj + 1, 0);
+				}
+				if(flt_bl == NULL)
+				{
+					flt_bl = flt_tile_import(zoom, lati - 1, lonj - 1, 0);
+				}
+				if(flt_bc == NULL)
+				{
+					flt_bc = flt_tile_import(zoom, lati - 1, lonj, 0);
+				}
+				if(flt_br == NULL)
+				{
+					flt_br = flt_tile_import(zoom, lati - 1, lonj + 1, 0);
+				}
+
+				// when sampling z15 we want to ensure there are no
+				// cracks in z13 when merging usgs-ned with ASTERv3
+
+				// sample z13 tiles whose origin should be in flt_cc
 				float x0f;
 				float y0f;
 				float x1f;
 				float y1f;
 				terrain_coord2tile(flt_cc->latT,
 				                   flt_cc->lonL,
-				                   zoom,
+				                   13,
 				                   &x0f,
 				                   &y0f);
 				terrain_coord2tile(flt_cc->latB,
 				                   flt_cc->lonR,
-				                   zoom,
+				                   13,
 				                   &x1f,
 				                   &y1f);
 
@@ -278,6 +347,15 @@ int main(int argc, char** argv)
 				if((y0f - floor(y0f)) == 0.0f)
 				{
 					y0 = (int) y0f;
+				}
+
+				// convert z13 tiles to z15 tiles
+				if(zoom == 15)
+				{
+					x0 = 4*x0;
+					y0 = 4*y0;
+					x1 = 4*x1 + 3;
+					y1 = 4*y1 + 3;
 				}
 
 				// check the tile range
