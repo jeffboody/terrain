@@ -21,15 +21,15 @@
  *
  */
 
-#include <stdlib.h>
-#include <assert.h>
-#include <unistd.h>
 #include <math.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 
-extern int terrain_tile_export(terrain_tile_t* self,
-                               const char* base);
+extern int
+terrain_tile_export(terrain_tile_t* self, const char* base);
 
 int main(int argc, char** argv)
 {

@@ -21,10 +21,12 @@
  *
  */
 
-#include <stdlib.h>
-#include <assert.h>
-#include <unistd.h>
 #include <math.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#define LOG_TAG "subterrain"
+#include "libcc/cc_log.h"
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 #include "texgz/texgz_tex.h"
@@ -40,9 +42,6 @@ extern void terrain_tile_adjustMinMax(terrain_tile_t* self,
                                       short max);
 extern void terrain_tile_exists(terrain_tile_t* self,
                                 int flags);
-
-#define LOG_TAG "subterrain"
-#include "terrain/terrain_log.h"
 
 static void sample_lod00(terrain_tile_t* ter,
                          terrain_tile_t* next)
@@ -72,9 +71,10 @@ static void sample_lod01(terrain_tile_t* ter,
 	int n = 0;
 	for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 	{
-		short h = terrain_tile_get(next,
-		                           TERRAIN_SAMPLES_TILE - 3,
-		                           nn);
+		short h;
+		h = terrain_tile_get(next,
+		                     TERRAIN_SAMPLES_TILE - 3,
+		                     nn);
 		terrain_tile_set(ter, -1, n++, h);
 	}
 }
@@ -92,9 +92,10 @@ static void sample_lod02(terrain_tile_t* ter,
 	int n = 128;
 	for(nn = 0; nn < TERRAIN_SAMPLES_TILE; nn += 2)
 	{
-		short h = terrain_tile_get(next,
-		                           TERRAIN_SAMPLES_TILE - 3,
-		                           nn);
+		short h;
+		h = terrain_tile_get(next,
+		                     TERRAIN_SAMPLES_TILE - 3,
+		                     nn);
 		terrain_tile_set(ter, -1, n++, h);
 	}
 }
@@ -108,9 +109,10 @@ static void sample_lod03(terrain_tile_t* ter,
 	}
 
 	// top-right border sample
-	short h = terrain_tile_get(next,
-	                           TERRAIN_SAMPLES_TILE - 3,
-	                           2);
+	short h;
+	h = terrain_tile_get(next,
+	                     TERRAIN_SAMPLES_TILE - 3,
+	                     2);
 	terrain_tile_set(ter, -1, 257, h);
 }
 
@@ -127,8 +129,9 @@ static void sample_lod10(terrain_tile_t* ter,
 	int m = 0;
 	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
-		short h = terrain_tile_get(next, mm,
-		                           TERRAIN_SAMPLES_TILE - 3);
+		short h;
+		h = terrain_tile_get(next, mm,
+		                     TERRAIN_SAMPLES_TILE - 3);
 		terrain_tile_set(ter, m++, -1, h);
 	}
 }
@@ -226,8 +229,9 @@ static void sample_lod20(terrain_tile_t* ter,
 	int m = 128;
 	for(mm = 0; mm < TERRAIN_SAMPLES_TILE; mm += 2)
 	{
-		short h = terrain_tile_get(next, mm,
-		                           TERRAIN_SAMPLES_TILE - 3);
+		short h;
+		h = terrain_tile_get(next, mm,
+		                     TERRAIN_SAMPLES_TILE - 3);
 		terrain_tile_set(ter, m++, -1, h);
 	}
 }
@@ -321,8 +325,9 @@ static void sample_lod30(terrain_tile_t* ter,
 	}
 
 	// bottom-left border sample
-	short h = terrain_tile_get(next, 2,
-	                           TERRAIN_SAMPLES_TILE - 3);
+	short h;
+	h = terrain_tile_get(next, 2,
+	                     TERRAIN_SAMPLES_TILE - 3);
 	terrain_tile_set(ter, 257, -1, h);
 }
 
@@ -477,7 +482,8 @@ static void sample_tile(int x, int y, int zoom)
 	}
 }
 
-static void sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
+static void
+sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 {
 	int x;
 	int y;
@@ -513,16 +519,8 @@ int main(int argc, char** argv)
 	float y0f;
 	float x1f;
 	float y1f;
-	terrain_coord2tile(latT,
-	                   lonL,
-	                   zoom,
-	                   &x0f,
-	                   &y0f);
-	terrain_coord2tile(latB,
-	                   lonR,
-	                   zoom,
-	                   &x1f,
-	                   &y1f);
+	terrain_coord2tile(latT, lonL, zoom, &x0f, &y0f);
+	terrain_coord2tile(latB, lonR, zoom, &x1f, &y1f);
 
 	// determine range of candidate tiles
 	int x0 = (int) x0f;

@@ -21,7 +21,6 @@
  *
  */
 
-#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,11 +28,11 @@
 #include <tiffio.h>
 #include <unistd.h>
 
-#include "../../libxmlstream/xml_istream.h"
-#include "flt_tile.h"
-
 #define LOG_TAG "flt"
-#include "../terrain_log.h"
+#include "libcc/cc_log.h"
+#include "libcc/cc_memory.h"
+#include "libxmlstream/xml_istream.h"
+#include "flt_tile.h"
 
 /***********************************************************
 * private                                                  *
@@ -46,9 +45,9 @@ static float meters2feet(float m)
 
 static int keyval(char* s, const char** k, const char** v)
 {
-	assert(s);
-	assert(k);
-	assert(v);
+	ASSERT(s);
+	ASSERT(k);
+	ASSERT(v);
 
 	// find key
 	*k = s;
@@ -94,10 +93,11 @@ static int keyval(char* s, const char** k, const char** v)
 	return 1;
 }
 
-static int flt_tile_importhdr(flt_tile_t* self, const char* fname)
+static int
+flt_tile_importhdr(flt_tile_t* self, const char* fname)
 {
-	assert(self);
-	assert(fname);
+	ASSERT(self);
+	ASSERT(fname);
 
 	// ignore if file does not exist
 	if(access(fname, F_OK) != 0)
@@ -196,10 +196,11 @@ static int flt_tile_importhdr(flt_tile_t* self, const char* fname)
 	return 1;
 }
 
-static int flt_tile_importprj(flt_tile_t* self, const char* fname)
+static int
+flt_tile_importprj(flt_tile_t* self, const char* fname)
 {
-	assert(self);
-	assert(fname);
+	ASSERT(self);
+	ASSERT(fname);
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
@@ -283,10 +284,11 @@ static int flt_tile_importprj(flt_tile_t* self, const char* fname)
 	return 1;
 }
 
-static int flt_tile_importflt(flt_tile_t* self, const char* fname)
+static int
+flt_tile_importflt(flt_tile_t* self, const char* fname)
 {
-	assert(self);
-	assert(fname);
+	ASSERT(self);
+	ASSERT(fname);
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
@@ -296,18 +298,18 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 	}
 
 	size_t size = self->nrows*self->ncols*sizeof(short);
-	self->height = (short*) malloc(size);
+	self->height = (short*) MALLOC(size);
 	if(self->height == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_height;
 	}
 
 	size_t rsize = self->ncols*sizeof(float);
-	float* rdata = (float*) malloc(rsize);
+	float* rdata = (float*) MALLOC(rsize);
 	if(rdata == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_rdata;
 	}
 
@@ -318,7 +320,8 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 		unsigned char* data = (unsigned char*) rdata;
 		while(left > 0)
 		{
-			size_t bytes = fread(data, sizeof(unsigned char), left, f);
+			size_t bytes;
+			bytes = fread(data, sizeof(unsigned char), left, f);
 			if(bytes == 0)
 			{
 				LOGE("fread failed");
@@ -346,8 +349,9 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 
 				// convert data to feet
 				float* height = (float*) &data[4*i];
-				self->height[row*self->ncols + i] = (short)
-				                                    (meters2feet(*height) + 0.5f);
+				int    idx    = row*self->ncols + i;
+				self->height[idx] = (short)
+				                    (meters2feet(*height) + 0.5f);
 			}
 		}
 		else
@@ -357,23 +361,24 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 			{
 				// convert data to feet
 				float* height = (float*) &data[4*i];
-				self->height[row*self->ncols + i] = (short)
-				                                    (meters2feet(*height) + 0.5f);
+				int    idx    = row*self->ncols + i;
+				self->height[idx] = (short)
+				                    (meters2feet(*height) + 0.5f);
 			}
 		}
 	}
 
-	free(rdata);
+	FREE(rdata);
 	fclose(f);
 
 	return 1;
 
 	// failure
 	fail_read:
-		free(rdata);
+		FREE(rdata);
 		rdata = NULL;
 	fail_rdata:
-		free(self->height);
+		FREE(self->height);
 		self->height = NULL;
 	fail_height:
 		fclose(f);
@@ -383,8 +388,8 @@ static int flt_tile_importflt(flt_tile_t* self, const char* fname)
 static int
 flt_tile_importtif(flt_tile_t* self, const char* fname)
 {
-	assert(self);
-	assert(fname);
+	ASSERT(self);
+	ASSERT(fname);
 
 	// ASTER v3
 	// https://lpdaac.usgs.gov/products/astgtmv003/
@@ -424,17 +429,17 @@ flt_tile_importtif(flt_tile_t* self, const char* fname)
 		goto fail_param;
 	}
 
-	short* tile = (short*) malloc(tw*th*sizeof(short));
+	short* tile = (short*) MALLOC(tw*th*sizeof(short));
 	if(tile == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_tile;
 	}
 
-	self->height = (short*) malloc(w*h*sizeof(short));
+	self->height = (short*) MALLOC(w*h*sizeof(short));
 	if(self->height == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_height;
 	}
 
@@ -471,8 +476,9 @@ flt_tile_importtif(flt_tile_t* self, const char* fname)
 						t = 0;
 					}
 
-					self->height[(i+m)*w + j + n] = (short)
-					                                (meters2feet((float) t) + 0.5f);
+					int idx = (i+m)*w + j + n;
+					self->height[idx] = (short)
+					                    (meters2feet((float) t) + 0.5f);
 				}
 			}
 		}
@@ -481,7 +487,7 @@ flt_tile_importtif(flt_tile_t* self, const char* fname)
 	self->nrows = h;
 	self->ncols = w;
 
-	free(tile);
+	FREE(tile);
 	TIFFClose(tiff);
 
 	// success
@@ -489,7 +495,7 @@ flt_tile_importtif(flt_tile_t* self, const char* fname)
 
 	// failure
 	fail_height:
-		free(tile);
+		FREE(tile);
 	fail_tile:
 	fail_param:
 		TIFFClose(tiff);
@@ -509,8 +515,8 @@ flt_tile_xmlEnd(void* priv, int line, const char* name,
                 const char* content)
 {
 	// content may be NULL
-	assert(priv);
-	assert(name);
+	ASSERT(priv);
+	ASSERT(name);
 
 	flt_tile_t* self = (flt_tile_t*) priv;
 
@@ -552,7 +558,8 @@ flt_tile_xmlEnd(void* priv, int line, const char* name,
 
 	// failure
 	fail_content:
-		LOGE("%i/%i: content is NULL", self->lat, self->lon);
+		LOGE("%i/%i: content is NULL",
+		     self->lat, self->lon);
 	return 0;
 }
 
@@ -560,9 +567,10 @@ flt_tile_xmlEnd(void* priv, int line, const char* name,
 * public                                                   *
 ***********************************************************/
 
-flt_tile_t* flt_tile_import(int zoom, int lat, int lon, int center)
+flt_tile_t*
+flt_tile_import(int zoom, int lat, int lon, int center)
 {
-	assert((zoom == 15) || (zoom == 13));
+	ASSERT((zoom == 15) || (zoom == 13));
 	char flt_fbase[256];
 	char flt_fname[256];
 	char hdr_fname[256];
@@ -577,17 +585,20 @@ flt_tile_t* flt_tile_import(int zoom, int lat, int lon, int center)
 	         flt_fbase, flt_fbase);
 	snprintf(hdr_fname, 256, "%s.hdr", flt_fname);
 	snprintf(prj_fname, 256, "%s.prj", flt_fname);
-	snprintf(tif_fname, 256, "ASTERv3/data/ASTGTMV003_%s%02i%s%03i_dem.tif",
+	snprintf(tif_fname, 256,
+	         "ASTERv3/data/ASTGTMV003_%s%02i%s%03i_dem.tif",
 	         (lat >= 0) ? "N" : "S", abs(lat),
 	         (lon >= 0) ? "E" : "W", abs(lon));
-	snprintf(xml_fname, 256, "ASTERv3/zip/ASTGTMV003_%s%02i%s%03i.zip.xml",
+	snprintf(xml_fname, 256,
+	         "ASTERv3/zip/ASTGTMV003_%s%02i%s%03i.zip.xml",
 	         (lat >= 0) ? "N" : "S", abs(lat),
 	         (lon >= 0) ? "E" : "W", abs(lon));
 
-	flt_tile_t* self = (flt_tile_t*) malloc(sizeof(flt_tile_t));
+	flt_tile_t* self;
+	self = (flt_tile_t*) MALLOC(sizeof(flt_tile_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return 0;
 	}
 
@@ -665,7 +676,8 @@ flt_tile_t* flt_tile_import(int zoom, int lat, int lon, int center)
 	if(flt_tile_importflt(self, flt_fname) == 0)
 	{
 		// filenames in source files are inconsistent
-		snprintf(flt_fname, 256, "usgs-ned/data/%s/float%s_13.flt",
+		snprintf(flt_fname, 256,
+		         "usgs-ned/data/%s/float%s_13.flt",
 		         flt_fbase, flt_fbase);
 		if(flt_tile_importflt(self, flt_fname) == 0)
 		{
@@ -682,19 +694,19 @@ flt_tile_t* flt_tile_import(int zoom, int lat, int lon, int center)
 	fail_prj:
 	fail_hdr:
 	fail_xml:
-		free(self);
+		FREE(self);
 	return NULL;
 }
 
 void flt_tile_delete(flt_tile_t** _self)
 {
-	assert(_self);
+	ASSERT(_self);
 
 	flt_tile_t* self = *_self;
 	if(self)
 	{
-		free(self->height);
-		free(self);
+		FREE(self->height);
+		FREE(self);
 		*_self = NULL;
 	}
 }
@@ -703,17 +715,19 @@ int flt_tile_sample(flt_tile_t* self,
                     double lat, double lon,
                     short* height)
 {
-	assert(self);
-	assert(height);
+	ASSERT(self);
+	ASSERT(height);
 
-	double lonu = (lon - self->lonL) / (self->lonR - self->lonL);
-	double latv = 1.0 - ((lat - self->latB) / (self->latT - self->latB));
+	double lonu = (lon - self->lonL)/
+	              (self->lonR - self->lonL);
+	double latv = 1.0 - ((lat - self->latB)/
+	                     (self->latT - self->latB));
 	if((lonu >= 0.0) && (lonu <= 1.0) &&
 	   (latv >= 0.0) && (latv <= 1.0))
 	{
 		// "float indices"
-		float lon   = (float) (lonu*(self->ncols - 1));
-		float lat   = (float) (latv*(self->nrows - 1));
+		float lon = (float) (lonu*(self->ncols - 1));
+		float lat = (float) (latv*(self->nrows - 1));
 
 		// determine indices to sample
 		int   lon0  = (int) lon;
@@ -746,10 +760,10 @@ int flt_tile_sample(flt_tile_t* self,
 		float v     = lat - lat0f;
 
 		// sample interpolation values
-		float h00   = (float) self->height[lat0*self->ncols + lon0];
-		float h01   = (float) self->height[lat0*self->ncols + lon1];
-		float h10   = (float) self->height[lat1*self->ncols + lon0];
-		float h11   = (float) self->height[lat1*self->ncols + lon1];
+		float h00 = (float) self->height[lat0*self->ncols + lon0];
+		float h01 = (float) self->height[lat0*self->ncols + lon1];
+		float h10 = (float) self->height[lat1*self->ncols + lon0];
+		float h11 = (float) self->height[lat1*self->ncols + lon1];
 
 		// workaround for incorrect source data around coastlines
 		if((h00 > 32000) || (h00 == self->nodata))

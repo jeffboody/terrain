@@ -22,12 +22,11 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
-#include "terrain/terrain_tile.h"
-#include "terrain/terrain_util.h"
 
 #define LOG_TAG "terrain"
-#include "terrain/terrain_log.h"
+#include "libcc/cc_log.h"
+#include "terrain/terrain_tile.h"
+#include "terrain/terrain_util.h"
 
 /***********************************************************
 * protected                                                *
@@ -46,8 +45,8 @@ static int crop(const char* src,
                 double latT, double lonL,
                 double latB, double lonR)
 {
-	assert(src);
-	assert(dst);
+	ASSERT(src);
+	ASSERT(dst);
 
 	short min;
 	short max;
@@ -163,7 +162,8 @@ static int crop(const char* src,
 	}
 
 	// read tile from src
-	terrain_tile_t* tile = terrain_tile_import(src, x, y, zoom);
+	terrain_tile_t* tile;
+	tile = terrain_tile_import(src, x, y, zoom);
 	if(tile == NULL)
 	{
 		return 0;

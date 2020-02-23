@@ -9,8 +9,7 @@ add_library(terrain
 
             # Source
             terrain_tile.c
-            terrain_util.c
-            terrain_log.c)
+            terrain_util.c)
 
 # Linking
 target_link_libraries(terrain

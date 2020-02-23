@@ -21,20 +21,20 @@
  *
  */
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <errno.h>
-#include <zlib.h>
 #include <math.h>
-#include "terrain_tile.h"
-#include "terrain_util.h"
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <zlib.h>
 
 #define LOG_TAG "terrain"
-#include "terrain_log.h"
+#include "../libcc/cc_log.h"
+#include "../libcc/cc_memory.h"
+#include "terrain_tile.h"
+#include "terrain_util.h"
 
 /***********************************************************
 * private                                                  *
@@ -42,8 +42,7 @@
 
 static int terrain_mkdir(const char* fname)
 {
-	assert(fname);
-	LOGD("debug fname=%s", fname);
+	ASSERT(fname);
 
 	int  len = strnlen(fname, 255);
 	char dir[256];
@@ -62,7 +61,8 @@ static int terrain_mkdir(const char* fname)
 			}
 
 			// try to mkdir
-			if(mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) == -1)
+			if(mkdir(dir, S_IRWXU | S_IRWXG | S_IROTH |
+			              S_IXOTH) == -1)
 			{
 				if(errno == EEXIST)
 				{
@@ -82,7 +82,7 @@ static int terrain_mkdir(const char* fname)
 
 static void terrain_tile_updateMinMax(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	// check if the min/max has already been set
 	if((self->min != TERRAIN_HEIGHT_MAX) &&
@@ -119,8 +119,8 @@ static void terrain_tile_updateMinMax(terrain_tile_t* self)
 static int readintle(const unsigned char* buffer,
                      int offset)
 {
-	assert(buffer);
-	assert(offset >= 0);
+	ASSERT(buffer);
+	ASSERT(offset >= 0);
 
 	int b0 = (int) buffer[offset + 0];
 	int b1 = (int) buffer[offset + 1];
@@ -136,8 +136,8 @@ static int readintle(const unsigned char* buffer,
 static int readintbe(const unsigned char* buffer,
                      int offset)
 {
-	assert(buffer);
-	assert(offset >= 0);
+	ASSERT(buffer);
+	ASSERT(offset >= 0);
 
 	int b0 = (int) buffer[offset + 3];
 	int b1 = (int) buffer[offset + 2];
@@ -159,11 +159,11 @@ static int swapendian(int i)
 	return o;
 }
 
-static short terrain_tile_interpolate(terrain_tile_t* self,
-                                      float u, float v)
+static short
+terrain_tile_interpolate(terrain_tile_t* self,
+                         float u, float v)
 {
-	assert(self);
-	LOGD("debug u=%f, v=%f", u, v);
+	ASSERT(self);
 
 	// "float indices"
 	float pu = u*(TERRAIN_SAMPLES_TILE - 1);
@@ -179,7 +179,8 @@ static short terrain_tile_interpolate(terrain_tile_t* self,
 	// determine the second pair of indices
 	int n1  = n0 + 1;
 	int m1  = m0 + 1;
-	int max = TERRAIN_SAMPLES_TILE + TERRAIN_SAMPLES_BORDER - 1;
+	int max = TERRAIN_SAMPLES_TILE +
+	          TERRAIN_SAMPLES_BORDER - 1;
 	if(n1 > max) { n1 = max; }
 	if(m1 > max) { m1 = max; }
 
@@ -203,15 +204,15 @@ static short terrain_tile_interpolate(terrain_tile_t* self,
 	return (short) (h0010 + s*(h0111 - h0010) + 0.5f);
 }
 
-static void terrain_tile_computeNormal(terrain_tile_t* self,
-                                       int i, int j,
-                                       float dx, float dy,
-                                       unsigned char* pnx,
-                                       unsigned char* pny)
+static void
+terrain_tile_computeNormal(terrain_tile_t* self,
+                           int i, int j, float dx, float dy,
+                           unsigned char* pnx,
+                           unsigned char* pny)
 {
-	assert(self);
-	assert(pnx);
-	assert(pny);
+	ASSERT(self);
+	ASSERT(pnx);
+	ASSERT(pny);
 
 	// compute the distance to next sample
 	float dist = 1.0f/(float) TERRAIN_SAMPLES_TILE;
@@ -236,10 +237,14 @@ static void terrain_tile_computeNormal(terrain_tile_t* self,
 	float dzdx = 0.5f*(e - w);
 	float dzdy = 0.5f*(s - n);
 #else
-	short nw = terrain_tile_interpolate(self, u - dist, v - dist);
-	short ne = terrain_tile_interpolate(self, u + dist, v - dist);
-	short sw = terrain_tile_interpolate(self, u - dist, v + dist);
-	short se = terrain_tile_interpolate(self, u + dist, v + dist);
+	short nw;
+	short ne;
+	short sw;
+	short se;
+	nw = terrain_tile_interpolate(self, u - dist, v - dist);
+	ne = terrain_tile_interpolate(self, u + dist, v - dist);
+	sw = terrain_tile_interpolate(self, u - dist, v + dist);
+	se = terrain_tile_interpolate(self, u + dist, v + dist);
 
 	// initialize edge masks
 	float mask_x[] =
@@ -301,8 +306,8 @@ static void terrain_tile_computeNormal(terrain_tile_t* self,
 int terrain_tile_export(terrain_tile_t* self,
                         const char* base)
 {
-	assert(self);
-	assert(base);
+	ASSERT(self);
+	ASSERT(base);
 
 	char fname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
@@ -358,11 +363,12 @@ int terrain_tile_export(terrain_tile_t* self,
 	            TERRAIN_SAMPLES_TOTAL*sizeof(short);
 	uLong src_size = (uLong) (bytes);
 	uLong dst_size = compressBound(src_size);
-	unsigned char* dst = (unsigned char*)
-	                     malloc(dst_size*sizeof(unsigned char));
+	unsigned char* dst;
+	dst = (unsigned char*)
+	      MALLOC(dst_size*sizeof(unsigned char));
 	if(dst == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_dst;
 	}
 
@@ -376,13 +382,14 @@ int terrain_tile_export(terrain_tile_t* self,
 	}
 
 	// write buffer
-	if(fwrite(dst, sizeof(unsigned char), dst_size, f) != dst_size)
+	if(fwrite(dst, sizeof(unsigned char), dst_size,
+	          f) != dst_size)
 	{
 		LOGE("fwrite failed");
 		goto fail_fwrite;
 	}
 
-	free(dst);
+	FREE(dst);
 	fclose(f);
 
 	// success
@@ -391,7 +398,7 @@ int terrain_tile_export(terrain_tile_t* self,
 	// failure
 	fail_fwrite:
 	fail_compress:
-		free(dst);
+		FREE(dst);
 	fail_dst:
 	fail_header:
 		fclose(f);
@@ -399,11 +406,10 @@ int terrain_tile_export(terrain_tile_t* self,
 	return 0;
 }
 
-void terrain_tile_set(terrain_tile_t* self,
-                      int m, int n,
+void terrain_tile_set(terrain_tile_t* self, int m, int n,
                       short h)
 {
-	assert(self);
+	ASSERT(self);
 
 	// offset indices by border
 	m += TERRAIN_SAMPLES_BORDER;
@@ -426,7 +432,7 @@ void terrain_tile_set(terrain_tile_t* self,
 void terrain_tile_adjustMinMax(terrain_tile_t* self,
                                short min, short max)
 {
-	assert(self);
+	ASSERT(self);
 
 	if(min < self->min)
 	{
@@ -442,7 +448,7 @@ void terrain_tile_adjustMinMax(terrain_tile_t* self,
 void terrain_tile_exists(terrain_tile_t* self,
                          int flags)
 {
-	assert(self);
+	ASSERT(self);
 
 	self->flags |= flags;
 }
@@ -453,11 +459,11 @@ void terrain_tile_exists(terrain_tile_t* self,
 
 terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 {
-	terrain_tile_t* self = (terrain_tile_t*)
-	                       malloc(sizeof(terrain_tile_t));
+	terrain_tile_t* self;
+	self = (terrain_tile_t*) MALLOC(sizeof(terrain_tile_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return NULL;
 	}
 
@@ -481,20 +487,21 @@ terrain_tile_t* terrain_tile_new(int x, int y, int zoom)
 
 void terrain_tile_delete(terrain_tile_t** _self)
 {
-	assert(_self);
+	ASSERT(_self);
 
 	terrain_tile_t* self = *_self;
 	if(self)
 	{
-		free(self);
+		FREE(self);
 		*_self = NULL;
 	}
 }
 
-terrain_tile_t* terrain_tile_import(const char* base,
-                                    int x, int y, int zoom)
+terrain_tile_t*
+terrain_tile_import(const char* base, int x, int y,
+                    int zoom)
 {
-	assert(base);
+	ASSERT(base);
 
 	char fname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
@@ -531,16 +538,17 @@ terrain_tile_t* terrain_tile_import(const char* base,
 	return NULL;
 }
 
-terrain_tile_t* terrain_tile_importf(FILE* f, int size,
-                                     int x, int y, int zoom)
+terrain_tile_t*
+terrain_tile_importf(FILE* f, int size, int x, int y,
+                     int zoom)
 {
-	assert(f);
+	ASSERT(f);
 
-	terrain_tile_t* self = (terrain_tile_t*)
-	                       malloc(sizeof(terrain_tile_t));
+	terrain_tile_t* self;
+	self = (terrain_tile_t*) MALLOC(sizeof(terrain_tile_t));
 	if(self == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		return NULL;
 	}
 
@@ -552,10 +560,10 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 
 	// allocate src buffer
 	size -= TERRAIN_HSIZE;
-	char* src = (char*) malloc(size*sizeof(char));
+	char* src = (char*) MALLOC(size*sizeof(char));
 	if(src == NULL)
 	{
-		LOGE("malloc failed");
+		LOGE("MALLOC failed");
 		goto fail_src;
 	}
 
@@ -583,7 +591,7 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	self->y    = y;
 	self->zoom = zoom;
 
-	free(src);
+	FREE(src);
 
 	// success
 	return self;
@@ -591,10 +599,10 @@ terrain_tile_t* terrain_tile_importf(FILE* f, int size,
 	// failure
 	fail_uncompress:
 	fail_read:
-		free(src);
+		FREE(src);
 	fail_src:
 	fail_header:
-		free(self);
+		FREE(self);
 	return NULL;
 }
 
@@ -603,10 +611,10 @@ int terrain_tile_header(const char* base,
                         short* min, short* max,
                         int* flags)
 {
-	assert(base);
-	assert(min);
-	assert(max);
-	assert(flags);
+	ASSERT(base);
+	ASSERT(min);
+	ASSERT(max);
+	ASSERT(flags);
 
 	char fname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
@@ -641,10 +649,10 @@ int terrain_tile_headerb(unsigned char* buffer,
                          short* min, short* max,
                          int* flags)
 {
-	assert(buffer);
-	assert(min);
-	assert(max);
-	assert(flags);
+	ASSERT(buffer);
+	ASSERT(min);
+	ASSERT(max);
+	ASSERT(flags);
 
 	if(size < TERRAIN_HSIZE)
 	{
@@ -675,14 +683,13 @@ int terrain_tile_headerb(unsigned char* buffer,
 	return 1;
 }
 
-int terrain_tile_headerf(FILE* f,
-                         short* min, short* max,
+int terrain_tile_headerf(FILE* f, short* min, short* max,
                          int* flags)
 {
-	assert(f);
-	assert(min);
-	assert(max);
-	assert(flags);
+	ASSERT(f);
+	ASSERT(min);
+	ASSERT(max);
+	ASSERT(flags);
 
 	unsigned char buffer[TERRAIN_HSIZE];
 	int size = fread(buffer, sizeof(unsigned char),
@@ -692,22 +699,20 @@ int terrain_tile_headerf(FILE* f,
 	                            min, max, flags);
 }
 
-void terrain_tile_coord(terrain_tile_t* self,
-                        int m, int n,
+void terrain_tile_coord(terrain_tile_t* self, int m, int n,
                         double* lat, double* lon)
 {
-	assert(self);
-	assert(lat);
-	assert(lon);
+	ASSERT(self);
+	ASSERT(lat);
+	ASSERT(lon);
 
 	terrain_sample2coord(self->x, self->y, self->zoom,
 	                     m, n, lat, lon);
 }
 
-short terrain_tile_get(terrain_tile_t* self,
-                       int m, int n)
+short terrain_tile_get(terrain_tile_t* self, int m, int n)
 {
-	assert(self);
+	ASSERT(self);
 
 	// offset indices by border
 	m += TERRAIN_SAMPLES_BORDER;
@@ -728,7 +733,7 @@ short terrain_tile_get(terrain_tile_t* self,
 short terrain_tile_sample(terrain_tile_t* self,
                           double lat, double lon)
 {
-	assert(self);
+	ASSERT(self);
 
 	// sample in interpolated space
 	float  S    = (float) TERRAIN_SAMPLES_TILE;
@@ -754,9 +759,9 @@ void terrain_tile_getBlock(terrain_tile_t* self,
                            int blocks, int r, int c,
                            short* data)
 {
-	assert(self);
-	assert(data);
-	assert(((TERRAIN_SAMPLES_TILE - 1) % blocks) == 0);
+	ASSERT(self);
+	ASSERT(data);
+	ASSERT(((TERRAIN_SAMPLES_TILE - 1) % blocks) == 0);
 
 	int m;
 	int n;
@@ -778,9 +783,9 @@ void terrain_tile_getBlockf(terrain_tile_t* self,
                             int blocks, int r, int c,
                             float* data)
 {
-	assert(self);
-	assert(data);
-	assert(((TERRAIN_SAMPLES_TILE - 1) % blocks) == 0);
+	ASSERT(self);
+	ASSERT(data);
+	ASSERT(((TERRAIN_SAMPLES_TILE - 1) % blocks) == 0);
 
 	int m;
 	int n;
@@ -801,8 +806,8 @@ void terrain_tile_getBlockf(terrain_tile_t* self,
 void terrain_tile_getNormalMap(terrain_tile_t* self,
                                unsigned char* data)
 {
-	assert(self);
-	assert(data);
+	ASSERT(self);
+	ASSERT(data);
 
 	// compute dx and dy of mask
 	double lat0;
@@ -840,42 +845,42 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 
 int terrain_tile_tl(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	return self->flags & TERRAIN_NEXT_TL;
 }
 
 int terrain_tile_bl(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	return self->flags & TERRAIN_NEXT_BL;
 }
 
 int terrain_tile_tr(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	return self->flags & TERRAIN_NEXT_TR;
 }
 
 int terrain_tile_br(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	return self->flags & TERRAIN_NEXT_BR;
 }
 
 short terrain_tile_min(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	return self->min;
 }
 
 short terrain_tile_max(terrain_tile_t* self)
 {
-	assert(self);
+	ASSERT(self);
 
 	return self->max;
 }

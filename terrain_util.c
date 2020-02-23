@@ -22,20 +22,18 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
 #include <math.h>
 #include "terrain_tile.h"
 #include "terrain_util.h"
 
 #define LOG_TAG "terrain"
-#include "terrain_log.h"
+#include "../libcc/cc_log.h"
 
-void  terrain_tile2coord(float x, float y, int zoom,
-                         double* lat, double* lon)
+void terrain_tile2coord(float x, float y, int zoom,
+                        double* lat, double* lon)
 {
-	assert(lat);
-	assert(lon);
-	LOGD("debug x=%f, y=%f, zoom=%i", x, y, zoom);
+	ASSERT(lat);
+	ASSERT(lon);
 
 	double worldu  = x/pow(2.0, (double) zoom);
 	double worldv  = y/pow(2.0, (double) zoom);
@@ -49,14 +47,12 @@ void  terrain_tile2coord(float x, float y, int zoom,
 	*lon           = rad_lon/(M_PI/180.0);
 }
 
-void  terrain_sample2coord(int x, int y, int zoom,
-                           int m, int n,
-                           double* lat, double* lon)
+void terrain_sample2coord(int x, int y, int zoom,
+                          int m, int n,
+                          double* lat, double* lon)
 {
-	assert(lat);
-	assert(lon);
-	LOGD("debug x=%i, y=%i, zoom=%i, m=%i, n=%i",
-	     x, y, zoom, m, n);
+	ASSERT(lat);
+	ASSERT(lon);
 
 	float s  = (float) TERRAIN_SAMPLES_TILE;
 	float xx = (float) x;
@@ -71,9 +67,8 @@ void  terrain_sample2coord(int x, int y, int zoom,
 void  terrain_coord2tile(double lat, double lon, int zoom,
                          float* x, float* y)
 {
-	assert(x);
-	assert(y);
-	LOGD("debug lat=%0.3lf, lon=%0.3lf, zoom=%i", lat, lon, zoom);
+	ASSERT(x);
+	ASSERT(y);
 
 	double rad_lat = (double) lat*M_PI/180.0;
 	double rad_lon = (double) lon*M_PI/180.0;
@@ -90,9 +85,8 @@ void  terrain_coord2tile(double lat, double lon, int zoom,
 void terrain_coord2xy(double lat, double lon,
                       float* x, float* y)
 {
-	assert(x);
-	assert(y);
-	LOGD("debug lat=%lf, lon=%lf", lat, lon);
+	ASSERT(x);
+	ASSERT(y);
 
 	// use home as the origin
 	double lat2meter = 111072.12110934;
@@ -107,9 +101,8 @@ void terrain_coord2xy(double lat, double lon,
 void terrain_xy2coord(float x, float y,
                       double* lat, double* lon)
 {
-	assert(lat);
-	assert(lon);
-	LOGD("debug x=%f, y=%f", x, y);
+	ASSERT(lat);
+	ASSERT(lon);
 
 	// use home as the origin
 	double lat2meter = 111072.12110934;

@@ -21,19 +21,17 @@
  *
  */
 
-#include <assert.h>
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
 
-#include "texgz/texgz_png.h"
-#include "texgz/texgz_tex.h"
+#define LOG_TAG "flt2image"
+#include "libcc/cc_log.h"
 #include "flt/flt_tile.h"
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
-
-#define LOG_TAG "flt2image"
-#include "terrain/terrain_log.h"
+#include "texgz/texgz_png.h"
+#include "texgz/texgz_tex.h"
 
 int main(int argc, char** argv)
 {
@@ -46,6 +44,7 @@ int main(int argc, char** argv)
 	int lat = (int) strtol(argv[1], NULL, 0);
 	int lon = (int) strtol(argv[2], NULL, 0);
 
+	// TODO - flt_tile_import
 	flt_tile_t* tile = flt_tile_import(lat, lon);
 	if(tile == NULL)
 	{
