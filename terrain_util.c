@@ -116,6 +116,22 @@ void terrain_xy2coord(float x, float y,
 	*lon = (xd/lon2meter) + home_lon;
 }
 
+void terrain_bounds(int x, int y, int zoom,
+                    double* latT, double* lonL,
+                    double* latB, double* lonR)
+{
+	ASSERT(latT);
+	ASSERT(lonL);
+	ASSERT(latB);
+	ASSERT(lonR);
+
+	terrain_sample2coord(x, y, zoom, 0, 0, latT, lonL);
+	terrain_sample2coord(x, y, zoom,
+	                     TERRAIN_SAMPLES_TILE - 1,
+	                     TERRAIN_SAMPLES_TILE - 1,
+	                     latB, lonR);
+}
+
 float terrain_m2ft(float m)
 {
 	return m*5280.0f/1609.344f;

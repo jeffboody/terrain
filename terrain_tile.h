@@ -117,6 +117,9 @@ int             terrain_tile_headerf(FILE* f,
 void            terrain_tile_coord(terrain_tile_t* self,
                                    int m, int n,
                                    double* lat, double* lon);
+void            terrain_tile_bounds(terrain_tile_t* self,
+                                    double* latT, double* lonL,
+                                    double* latB, double* lonR);
 short           terrain_tile_get(terrain_tile_t* self,
                                  int m, int n);
 short           terrain_tile_sample(terrain_tile_t* self,

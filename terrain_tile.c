@@ -710,6 +710,20 @@ void terrain_tile_coord(terrain_tile_t* self, int m, int n,
 	                     m, n, lat, lon);
 }
 
+void terrain_tile_bounds(terrain_tile_t* self,
+                         double* latT, double* lonL,
+                         double* latB, double* lonR)
+{
+	ASSERT(self);
+	ASSERT(latT);
+	ASSERT(lonL);
+	ASSERT(latB);
+	ASSERT(lonR);
+
+	return terrain_bounds(self->x, self->y, self->zoom,
+	                      latT, lonL, latB, lonR);
+}
+
 short terrain_tile_get(terrain_tile_t* self, int m, int n)
 {
 	ASSERT(self);
