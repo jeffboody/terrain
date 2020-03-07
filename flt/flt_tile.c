@@ -29,9 +29,9 @@
 #include <unistd.h>
 
 #define LOG_TAG "flt"
-#include "libcc/cc_log.h"
-#include "libcc/cc_memory.h"
-#include "libxmlstream/xml_istream.h"
+#include "../../libcc/cc_log.h"
+#include "../../libcc/cc_memory.h"
+#include "../../libxmlstream/xml_istream.h"
 #include "flt_tile.h"
 
 /***********************************************************

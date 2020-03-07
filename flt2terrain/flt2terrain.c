@@ -30,7 +30,7 @@
 #include "flt/flt_tile.h"
 #include "libcc/cc_log.h"
 #include "libcc/cc_timestamp.h"
-#include "libcc/cc_workq.h"
+#include "libcc/cc_jobq.h"
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 
@@ -55,7 +55,7 @@ static flt_tile_t* flt_bc = NULL;
 static flt_tile_t* flt_br = NULL;
 
 static const char* output = NULL;
-static cc_workq_t* workq  = NULL;
+static cc_jobq_t*  jobq   = NULL;
 static int         error  = 0;
 
 typedef struct
@@ -96,7 +96,7 @@ tile_job_delete(tile_job_t** _self)
 	}
 }
 
-static int
+static void
 sample_tile_run(int tid, void* owner, void* task)
 {
 	assert(task);
@@ -107,7 +107,7 @@ sample_tile_run(int tid, void* owner, void* task)
 	ter = terrain_tile_new(job->x, job->y, job->zoom);
 	if(ter == NULL)
 	{
-		return 0;
+		goto fail_terrain;
 	}
 
 	int m;
@@ -155,31 +155,21 @@ sample_tile_run(int tid, void* owner, void* task)
 	}
 
 	terrain_tile_delete(&ter);
+	tile_job_delete(&job);
 
 	// success
-	return 1;
+	return;
 
 	// failure
 	fail_export:
 		terrain_tile_delete(&ter);
-	return 0;
-}
-
-static void
-sample_tile_finish(void* owner, void* task, int status)
-{
-	assert(task);
-
-	tile_job_t* job = (tile_job_t*) task;
-
-	if(status != CC_WORKQ_STATUS_COMPLETE)
+	fail_terrain:
 	{
 		LOGE("%i/%i/%i: error",
 		     job->zoom, job->x, job->y);
+		tile_job_delete(&job);
 		error = 1;
 	}
-
-	tile_job_delete(&job);
 }
 
 static int
@@ -199,8 +189,7 @@ sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 				return 0;
 			}
 
-			if(cc_workq_run(workq, (void*) job, 0) ==
-			   CC_WORKQ_STATUS_ERROR)
+			if(cc_jobq_run(jobq, (void*) job) == 0)
 			{
 				tile_job_delete(&job);
 				return 0;
@@ -208,7 +197,7 @@ sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 		}
 	}
 
-	cc_workq_finish(workq);
+	cc_jobq_finish(jobq);
 	return error ? 0 : 1;
 }
 
@@ -241,10 +230,11 @@ int main(int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	// initialize workq
-	workq = cc_workq_new(NULL, 4, sample_tile_run,
-	                     sample_tile_finish);
-	if(workq == NULL)
+	// initialize jobq
+	jobq = cc_jobq_new(NULL, 4,
+	                   CC_JOBQ_THREAD_PRIORITY_DEFAULT,
+	                   sample_tile_run);
+	if(jobq == NULL)
 	{
 		return EXIT_FAILURE;
 	}
@@ -413,7 +403,7 @@ int main(int argc, char** argv)
 		flt_tile_delete(&flt_br);
 	}
 
-	cc_workq_delete(&workq);
+	cc_jobq_delete(&jobq);
 
 	// success
 	LOGI("SUCCESS: dt=%lf", cc_timestamp() - t0);
@@ -421,7 +411,7 @@ int main(int argc, char** argv)
 
 	// failure
 	fail_sample:
-		cc_workq_finish(workq);
+		cc_jobq_finish(jobq);
 		flt_tile_delete(&flt_tl);
 		flt_tile_delete(&flt_cl);
 		flt_tile_delete(&flt_bl);
@@ -431,7 +421,7 @@ int main(int argc, char** argv)
 		flt_tile_delete(&flt_tr);
 		flt_tile_delete(&flt_cr);
 		flt_tile_delete(&flt_br);
-		cc_workq_delete(&workq);
+		cc_jobq_delete(&jobq);
 		LOGE("FAILURE: dt=%lf", cc_timestamp() - t0);
 	return EXIT_FAILURE;
 }
