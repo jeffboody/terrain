@@ -105,6 +105,8 @@ flt_tile_importhdr(flt_tile_t* self, const char* fname)
 		return 0;
 	}
 
+	LOGI("fname=%s", fname);
+
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
 	{
@@ -400,6 +402,8 @@ flt_tile_importtif(flt_tile_t* self, const char* fname)
 		return 0;
 	}
 
+	LOGI("fname=%s", fname);
+
 	TIFF *tiff = TIFFOpen(fname, "r");
 	if(tiff == NULL)
 	{
@@ -568,9 +572,8 @@ flt_tile_xmlEnd(void* priv, int line, const char* name,
 ***********************************************************/
 
 flt_tile_t*
-flt_tile_import(int zoom, int lat, int lon, int center)
+flt_tile_import(int type, int lat, int lon)
 {
-	ASSERT((zoom == 15) || (zoom == 13));
 	char flt_fbase[256];
 	char flt_fname[256];
 	char hdr_fname[256];
@@ -603,6 +606,7 @@ flt_tile_import(int zoom, int lat, int lon, int center)
 	}
 
 	// init defaults
+	self->type      = type;
 	self->lat       = lat;
 	self->lon       = lon;
 	self->lonL      = (double) lon;
@@ -615,32 +619,14 @@ flt_tile_import(int zoom, int lat, int lon, int center)
 	self->ncols     = 0;
 	self->height    = NULL;
 
-	if(zoom == 15)
+	if(type == FLT_TILE_TYPE_USGS)
 	{
 		// import flt/tif files but prefer flt files since
 		// they are higher resolution
 		if(flt_tile_importhdr(self, hdr_fname) == 0)
 		{
-			// only import ASTERv3 for boundary tiles
-			if((center == 0) &&
-			   flt_tile_importtif(self, tif_fname))
-			{
-				// parse extent
-				if(xml_istream_parse((void*) self,
-				                     flt_tile_xmlStart,
-				                     flt_tile_xmlEnd,
-				                     xml_fname) == 0)
-				{
-					LOGE("invalid %s", xml_fname);
-					goto fail_xml;
-				}
-
-				// success
-				return self;
-			}
-
-			// silently fail if hdr/tif fail
-			goto fail_hdr;
+			// silently fail
+			goto fail_import;
 		}
 	}
 	else
@@ -654,15 +640,15 @@ flt_tile_import(int zoom, int lat, int lon, int center)
 			                     xml_fname) == 0)
 			{
 				LOGE("invalid %s", xml_fname);
-				goto fail_xml;
+				goto fail_import;
 			}
 
 			// success
 			return self;
 		}
 
-		// silently fail if hdr/tif fail
-		goto fail_hdr;
+		// silently fail
+		goto fail_import;
 	}
 
 	// if hdr exists then prj and flt
@@ -692,8 +678,7 @@ flt_tile_import(int zoom, int lat, int lon, int center)
 	// failure
 	fail_flt:
 	fail_prj:
-	fail_hdr:
-	fail_xml:
+	fail_import:
 		FREE(self);
 	return NULL;
 }

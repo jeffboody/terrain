@@ -27,6 +27,7 @@
 
 #define LOG_TAG "subterrain"
 #include "libcc/cc_log.h"
+#include "libcc/cc_timestamp.h"
 #include "terrain/terrain_tile.h"
 #include "terrain/terrain_util.h"
 #include "texgz/texgz_tex.h"
@@ -380,7 +381,7 @@ static void sample_lod33(terrain_tile_t* ter,
 	terrain_tile_set(ter, 257, 257, h);
 }
 
-static void sample_tile(int x, int y, int zoom)
+static void sample_tile(int x, int y, int zoom, char* output)
 {
 	int xx = 2*x;
 	int yy = 2*y;
@@ -397,14 +398,14 @@ static void sample_tile(int x, int y, int zoom)
 		NULL, NULL, NULL, NULL,
 		NULL, NULL, NULL, NULL,
 	};
+
+	char fname[256];
 	for(r = 0; r < 4; ++r)
 	{
 		for(c = 0; c < 4; ++c)
 		{
-			char fname[256];
-			snprintf(fname, 256, "./terrain/%i/%i/%i.terrain",
-			         zz, xx + c - 1, yy + r - 1);
-			fname[255] = '\0';
+			snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+			         output, zz, xx + c - 1, yy + r - 1);
 
 			if(access(fname, F_OK) != 0)
 			{
@@ -413,7 +414,7 @@ static void sample_tile(int x, int y, int zoom)
 			}
 
 			int idx = 4*r + c;
-			next[idx] = terrain_tile_import(".",
+			next[idx] = terrain_tile_import(output,
 			                                xx + c - 1,
 			                                yy + r - 1,
 			                                zz);
@@ -454,7 +455,7 @@ static void sample_tile(int x, int y, int zoom)
 	sample_lod33(ter, next[15]);
 
 	// export this lod
-	if(terrain_tile_export(ter, ".") == 0)
+	if(terrain_tile_export(ter, output) == 0)
 	{
 		goto fail_export;
 	}
@@ -483,19 +484,24 @@ static void sample_tile(int x, int y, int zoom)
 }
 
 static void
-sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
+sample_tile_range(int x0, int y0, int x1, int y1, int zoom,
+                  char* output)
 {
 	int x;
 	int y;
-	int idx   = 0;
+	int idx   = 1;
 	int count = (x1 - x0 + 1)*(y1 - y0 + 1);
 	for(y = y0; y <= y1; ++y)
 	{
 		for(x = x0; x <= x1; ++x)
 		{
-			LOGI("%i/%i: x=%i, y=%i", idx++, count, x, y);
+			if(idx%100 == 1)
+			{
+				LOGI("%i/%i: %i/%i/%i", idx, count, zoom, x, y);
+			}
+			++idx;
 
-			sample_tile(x, y, zoom);
+			sample_tile(x, y, zoom, output);
 		}
 	}
 }
@@ -504,54 +510,61 @@ int main(int argc, char** argv)
 {
 	if(argc != 6)
 	{
-		LOGE("usage: %s [zoom] [latT] [lonL] [latB] [lonR]", argv[0]);
+		LOGE("usage: %s [latT] [lonL] [latB] [lonR] [output]", argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	int zoom = (int) strtol(argv[1], NULL, 0);
-	int latT = (int) strtol(argv[2], NULL, 0) + 1;
-	int lonL = (int) strtol(argv[3], NULL, 0);
-	int latB = (int) strtol(argv[4], NULL, 0);
-	int lonR = (int) strtol(argv[5], NULL, 0) + 1;
+	int   latT   = (int) strtol(argv[1], NULL, 0) + 1;
+	int   lonL   = (int) strtol(argv[2], NULL, 0);
+	int   latB   = (int) strtol(argv[3], NULL, 0);
+	int   lonR   = (int) strtol(argv[4], NULL, 0) + 1;
+	char* output = argv[5];
 
-	// determine tile range
-	float x0f;
-	float y0f;
-	float x1f;
-	float y1f;
-	terrain_coord2tile(latT, lonL, zoom, &x0f, &y0f);
-	terrain_coord2tile(latB, lonR, zoom, &x1f, &y1f);
+	double t0 = cc_timestamp();
 
-	// determine range of candidate tiles
-	int x0 = (int) x0f;
-	int y0 = (int) y0f;
-	int x1 = (int) (x1f + 1.0f);
-	int y1 = (int) (y1f + 1.0f);
+	int zoom;
+	for(zoom = 14; zoom >= 0; --zoom)
+	{
+		// determine tile range
+		float x0f;
+		float y0f;
+		float x1f;
+		float y1f;
+		terrain_coord2tile(latT, lonL, zoom, &x0f, &y0f);
+		terrain_coord2tile(latB, lonR, zoom, &x1f, &y1f);
 
-	// check the tile range
-	int range = (int) pow(2.0, (double) zoom);
-	if(x0 < 0)
-	{
-		x0 = 0;
-	}
-	if(y0 < 0)
-	{
-		y0 = 0;
-	}
-	if(x1 >= range)
-	{
-		x1 = range - 1;
-	}
-	if(y1 >= range)
-	{
-		y1 = range - 1;
-	}
+		// determine range of candidate tiles
+		int x0 = (int) x0f;
+		int y0 = (int) y0f;
+		int x1 = (int) (x1f + 1.0f);
+		int y1 = (int) (y1f + 1.0f);
 
-	// sample the set of tiles whose origin should cover range
-	// again, due to overlap with other flt tiles the sampling
-	// actually occurs over the entire flt_xx set
-	sample_tile_range(x0, y0, x1, y1, zoom);
+		// check the tile range
+		int range = (int) pow(2.0, (double) zoom);
+		if(x0 < 0)
+		{
+			x0 = 0;
+		}
+		if(y0 < 0)
+		{
+			y0 = 0;
+		}
+		if(x1 >= range)
+		{
+			x1 = range - 1;
+		}
+		if(y1 >= range)
+		{
+			y1 = range - 1;
+		}
+
+		// sample the set of tiles whose origin should cover range
+		// again, due to overlap with other flt tiles the sampling
+		// actually occurs over the entire flt_xx set
+		sample_tile_range(x0, y0, x1, y1, zoom, output);
+	}
 
 	// success
+	LOGI("dt=%lf", cc_timestamp() - t0);
 	return EXIT_SUCCESS;
 }

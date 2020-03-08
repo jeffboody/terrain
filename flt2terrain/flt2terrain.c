@@ -44,15 +44,26 @@ extern void terrain_tile_set(terrain_tile_t* self,
 // flt_cc is centered on the current tile being sampled
 // load neighboring flt tiles since they may overlap
 // only sample ned tiles whose origin is in flt_cc
-static flt_tile_t* flt_tl = NULL;
-static flt_tile_t* flt_tc = NULL;
-static flt_tile_t* flt_tr = NULL;
-static flt_tile_t* flt_cl = NULL;
-static flt_tile_t* flt_cc = NULL;
-static flt_tile_t* flt_cr = NULL;
-static flt_tile_t* flt_bl = NULL;
-static flt_tile_t* flt_bc = NULL;
-static flt_tile_t* flt_br = NULL;
+// uflt is for USGS
+// aflt is for ASTERv3
+static flt_tile_t* uflt_tl = NULL;
+static flt_tile_t* uflt_tc = NULL;
+static flt_tile_t* uflt_tr = NULL;
+static flt_tile_t* uflt_cl = NULL;
+static flt_tile_t* uflt_cc = NULL;
+static flt_tile_t* uflt_cr = NULL;
+static flt_tile_t* uflt_bl = NULL;
+static flt_tile_t* uflt_bc = NULL;
+static flt_tile_t* uflt_br = NULL;
+static flt_tile_t* aflt_tl = NULL;
+static flt_tile_t* aflt_tc = NULL;
+static flt_tile_t* aflt_tr = NULL;
+static flt_tile_t* aflt_cl = NULL;
+static flt_tile_t* aflt_cc = NULL;
+static flt_tile_t* aflt_cr = NULL;
+static flt_tile_t* aflt_bl = NULL;
+static flt_tile_t* aflt_bc = NULL;
+static flt_tile_t* aflt_br = NULL;
 
 static const char* output = NULL;
 static cc_jobq_t*  jobq   = NULL;
@@ -63,10 +74,11 @@ typedef struct
 	int zoom;
 	int x;
 	int y;
+	int complete;
 } tile_job_t;
 
 static tile_job_t*
-tile_job_new(int zoom, int x, int y)
+tile_job_new(int zoom, int x, int y, int complete)
 {
 	tile_job_t* self;
 	self = (tile_job_t*) malloc(sizeof(tile_job_t));
@@ -76,9 +88,10 @@ tile_job_new(int zoom, int x, int y)
 		return NULL;
 	}
 
-	self->zoom = zoom;
-	self->x    = x;
-	self->y    = y;
+	self->zoom     = zoom;
+	self->x        = x;
+	self->y        = y;
+	self->complete = complete;
 
 	return self;
 }
@@ -134,17 +147,67 @@ sample_tile_run(int tid, void* owner, void* task)
 			// At edges of range a tile may not be
 			// fully covered by flt_xx
 			short h;
-			if((flt_cc && flt_tile_sample(flt_cc, lat, lon, &h)) ||
-			   (flt_tc && flt_tile_sample(flt_tc, lat, lon, &h)) ||
-			   (flt_bc && flt_tile_sample(flt_bc, lat, lon, &h)) ||
-			   (flt_cl && flt_tile_sample(flt_cl, lat, lon, &h)) ||
-			   (flt_cr && flt_tile_sample(flt_cr, lat, lon, &h)) ||
-			   (flt_tl && flt_tile_sample(flt_tl, lat, lon, &h)) ||
-			   (flt_bl && flt_tile_sample(flt_bl, lat, lon, &h)) ||
-			   (flt_tr && flt_tile_sample(flt_tr, lat, lon, &h)) ||
-			   (flt_br && flt_tile_sample(flt_br, lat, lon, &h)))
+			if(job->complete)
 			{
-				terrain_tile_set(ter, m, n, h);
+				// only sample USGS
+				if((uflt_cc && flt_tile_sample(uflt_cc, lat, lon, &h)) ||
+				   (uflt_tc && flt_tile_sample(uflt_tc, lat, lon, &h)) ||
+				   (uflt_bc && flt_tile_sample(uflt_bc, lat, lon, &h)) ||
+				   (uflt_cl && flt_tile_sample(uflt_cl, lat, lon, &h)) ||
+				   (uflt_cr && flt_tile_sample(uflt_cr, lat, lon, &h)) ||
+				   (uflt_tl && flt_tile_sample(uflt_tl, lat, lon, &h)) ||
+				   (uflt_bl && flt_tile_sample(uflt_bl, lat, lon, &h)) ||
+				   (uflt_tr && flt_tile_sample(uflt_tr, lat, lon, &h)) ||
+				   (uflt_br && flt_tile_sample(uflt_br, lat, lon, &h)))
+				{
+					terrain_tile_set(ter, m, n, h);
+				}
+			}
+			else if(uflt_cc)
+			{
+				// initialize with ASTERv3
+				if((aflt_cc && flt_tile_sample(aflt_cc, lat, lon, &h)) ||
+				   (aflt_tc && flt_tile_sample(aflt_tc, lat, lon, &h)) ||
+				   (aflt_bc && flt_tile_sample(aflt_bc, lat, lon, &h)) ||
+				   (aflt_cl && flt_tile_sample(aflt_cl, lat, lon, &h)) ||
+				   (aflt_cr && flt_tile_sample(aflt_cr, lat, lon, &h)) ||
+				   (aflt_tl && flt_tile_sample(aflt_tl, lat, lon, &h)) ||
+				   (aflt_bl && flt_tile_sample(aflt_bl, lat, lon, &h)) ||
+				   (aflt_tr && flt_tile_sample(aflt_tr, lat, lon, &h)) ||
+				   (aflt_br && flt_tile_sample(aflt_br, lat, lon, &h)))
+				{
+					terrain_tile_set(ter, m, n, h);
+				}
+
+				// override with USGS
+				if((uflt_cc && flt_tile_sample(uflt_cc, lat, lon, &h)) ||
+				   (uflt_tc && flt_tile_sample(uflt_tc, lat, lon, &h)) ||
+				   (uflt_bc && flt_tile_sample(uflt_bc, lat, lon, &h)) ||
+				   (uflt_cl && flt_tile_sample(uflt_cl, lat, lon, &h)) ||
+				   (uflt_cr && flt_tile_sample(uflt_cr, lat, lon, &h)) ||
+				   (uflt_tl && flt_tile_sample(uflt_tl, lat, lon, &h)) ||
+				   (uflt_bl && flt_tile_sample(uflt_bl, lat, lon, &h)) ||
+				   (uflt_tr && flt_tile_sample(uflt_tr, lat, lon, &h)) ||
+				   (uflt_br && flt_tile_sample(uflt_br, lat, lon, &h)))
+				{
+					terrain_tile_set(ter, m, n, h);
+				}
+			}
+			else
+			{
+				// only sample with ASTERv3
+				if((aflt_cc && flt_tile_sample(aflt_cc, lat, lon, &h)) ||
+				   (aflt_tc && flt_tile_sample(aflt_tc, lat, lon, &h)) ||
+				   (aflt_bc && flt_tile_sample(aflt_bc, lat, lon, &h)) ||
+				   (aflt_cl && flt_tile_sample(aflt_cl, lat, lon, &h)) ||
+				   (aflt_cr && flt_tile_sample(aflt_cr, lat, lon, &h)) ||
+				   (aflt_tl && flt_tile_sample(aflt_tl, lat, lon, &h)) ||
+				   (aflt_bl && flt_tile_sample(aflt_bl, lat, lon, &h)) ||
+				   (aflt_tr && flt_tile_sample(aflt_tr, lat, lon, &h)) ||
+				   (aflt_br && flt_tile_sample(aflt_br, lat, lon, &h)))
+				{
+					terrain_tile_set(ter, m, n, h);
+				}
 			}
 		}
 	}
@@ -173,7 +236,8 @@ sample_tile_run(int tid, void* owner, void* task)
 }
 
 static int
-sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
+sample_tile_range(int x0, int y0, int x1, int y1,
+                  int zoom, int complete)
 {
 	// sample tiles whose origin should be in flt_cc
 	int x;
@@ -183,7 +247,7 @@ sample_tile_range(int x0, int y0, int x1, int y1, int zoom)
 		for(x = x0; x <= x1; ++x)
 		{
 			tile_job_t* job;
-			job = tile_job_new(zoom, x, y);
+			job = tile_job_new(zoom, x, y, complete);
 			if(job == NULL)
 			{
 				return 0;
@@ -226,7 +290,7 @@ int main(int argc, char** argv)
 	}
 	else
 	{
-		LOGE("zoom must be 15 (usgs-ned + ASTERv3) or 13 (ASTERv3)");
+		LOGE("zoom must be 15 (USGS + ASTERv3) or 13 (ASTERv3)");
 		return EXIT_FAILURE;
 	}
 
@@ -245,77 +309,154 @@ int main(int argc, char** argv)
 
 	int lati;
 	int lonj;
-	int idx   = 0;
+	int idx   = 1;
 	int count = (latT - latB + 1)*(lonR - lonL + 1);
 	for(lati = latB; lati <= latT; ++lati)
 	{
 		for(lonj = lonL; lonj <= lonR; ++lonj)
 		{
 			// status message
-			++idx;
 			t2 = cc_timestamp();
-			LOGI("%i/%i/%lf/%lf: lat=%i, lon=%i",
-			     idx, count, t2 - t0, t2 - t1, lati, lonj);
+			LOGI("%i/%i: dt=%lf/%lf, lat=%i, lon=%i",
+			     idx, count, t2 - t1, t2 - t0, lati, lonj);
+			++idx;
 			t1 = t2;
 
 			// initialize flt center
-			if(flt_cc == NULL)
+			// only sample USGS for z15
+			if((uflt_cc == NULL) && (zoom == 15))
 			{
-				flt_cc = flt_tile_import(zoom, lati, lonj, 1);
+				uflt_cc = flt_tile_import(FLT_TILE_TYPE_USGS,
+				                          lati, lonj);
 			}
 
-			// flt_cc may be NULL for sparse data
-			if(flt_cc)
+			// uflt_cc may be NULL for sparse data
+			// only sample USGS for z15
+			int complete = 0;
+			if(uflt_cc && (zoom == 15))
 			{
 				// initialize flt boundary
-				if(flt_tl == NULL)
+				if(uflt_tl == NULL)
 				{
-					flt_tl = flt_tile_import(zoom, lati + 1, lonj - 1, 0);
+					uflt_tl = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati + 1, lonj - 1);
 				}
-				if(flt_tc == NULL)
+				if(uflt_tc == NULL)
 				{
-					flt_tc = flt_tile_import(zoom, lati + 1, lonj, 0);
+					uflt_tc = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati + 1, lonj);
 				}
-				if(flt_tr == NULL)
+				if(uflt_tr == NULL)
 				{
-					flt_tr = flt_tile_import(zoom, lati + 1, lonj + 1, 0);
+					uflt_tr = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati + 1, lonj + 1);
 				}
-				if(flt_cl == NULL)
+				if(uflt_cl == NULL)
 				{
-					flt_cl = flt_tile_import(zoom, lati, lonj - 1, 0);
+					uflt_cl = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati, lonj - 1);
 				}
-				if(flt_cr == NULL)
+				if(uflt_cr == NULL)
 				{
-					flt_cr = flt_tile_import(zoom, lati, lonj + 1, 0);
+					uflt_cr = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati, lonj + 1);
 				}
-				if(flt_bl == NULL)
+				if(uflt_bl == NULL)
 				{
-					flt_bl = flt_tile_import(zoom, lati - 1, lonj - 1, 0);
+					uflt_bl = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati - 1, lonj - 1);
 				}
-				if(flt_bc == NULL)
+				if(uflt_bc == NULL)
 				{
-					flt_bc = flt_tile_import(zoom, lati - 1, lonj, 0);
+					uflt_bc = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati - 1, lonj);
 				}
-				if(flt_br == NULL)
+				if(uflt_br == NULL)
 				{
-					flt_br = flt_tile_import(zoom, lati - 1, lonj + 1, 0);
+					uflt_br = flt_tile_import(FLT_TILE_TYPE_USGS,
+					                          lati - 1, lonj + 1);
 				}
 
+				complete = uflt_tl && uflt_cl && uflt_bl &&
+				           uflt_tc && uflt_cc && uflt_bc &&
+				           uflt_tr && uflt_cr && uflt_br;
+			}
+
+			// only sample ASTERv3 when USGS is not complete
+			// or for z13
+			if(((aflt_cc == NULL) && uflt_cc && (complete == 0)) ||
+			   ((aflt_cc == NULL) && (zoom == 13)))
+			{
+				aflt_cc = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+				                          lati, lonj);
+			}
+
+			// aflt_cc may be NULL for sparse data
+			// only sample ASTERv3 when USGS is not complete
+			// or for z13
+			if((uflt_cc && (complete == 0)) ||
+			   (aflt_cc && (zoom == 13)))
+			{
+				// initialize flt boundary
+				if(aflt_tl == NULL)
+				{
+					aflt_tl = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati + 1, lonj - 1);
+				}
+				if(aflt_tc == NULL)
+				{
+					aflt_tc = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati + 1, lonj);
+				}
+				if(aflt_tr == NULL)
+				{
+					aflt_tr = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati + 1, lonj + 1);
+				}
+				if(aflt_cl == NULL)
+				{
+					aflt_cl = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati, lonj - 1);
+				}
+				if(aflt_cr == NULL)
+				{
+					aflt_cr = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati, lonj + 1);
+				}
+				if(aflt_bl == NULL)
+				{
+					aflt_bl = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati - 1, lonj - 1);
+				}
+				if(aflt_bc == NULL)
+				{
+					aflt_bc = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati - 1, lonj);
+				}
+				if(aflt_br == NULL)
+				{
+					aflt_br = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
+					                          lati - 1, lonj + 1);
+				}
+			}
+
+			if(uflt_cc || aflt_cc)
+			{
 				// when sampling z15 we want to ensure there are no
-				// cracks in z13 when merging usgs-ned with ASTERv3
+				// cracks in z13 when merging USGS with ASTERv3
 
 				// sample z13 tiles whose origin should be in flt_cc
 				float x0f;
 				float y0f;
 				float x1f;
 				float y1f;
-				terrain_coord2tile(flt_cc->latT,
-				                   flt_cc->lonL,
+				terrain_coord2tile((double) lati,
+				                   (double) lonj,
 				                   13,
 				                   &x0f,
 				                   &y0f);
-				terrain_coord2tile(flt_cc->latB,
-				                   flt_cc->lonR,
+				terrain_coord2tile((double) (lati - 1),
+				                   (double) (lonj + 1),
 				                   13,
 				                   &x1f,
 				                   &y1f);
@@ -367,40 +508,63 @@ int main(int argc, char** argv)
 					y1 = range - 1;
 				}
 
-				// sample the set of tiles whose origin should cover flt_cc
-				// again, due to overlap with other flt tiles the sampling
-				// actually occurs over the entire flt_xx set
-				if(sample_tile_range(x0, y0, x1, y1, zoom) == 0)
+				// sample the set of tiles whose origin should cover
+				// flt_cc again, due to overlap with other flt tiles
+				// the sampling actually occurs over the entire flt_xx
+				// set
+				if(sample_tile_range(x0, y0, x1, y1, zoom,
+				                     complete) == 0)
 				{
 					goto fail_sample;
 				}
 			}
 
 			// next step, shift right
-			flt_tile_delete(&flt_tl);
-			flt_tile_delete(&flt_cl);
-			flt_tile_delete(&flt_bl);
-			flt_tl = flt_tc;
-			flt_cl = flt_cc;
-			flt_bl = flt_bc;
-			flt_tc = flt_tr;
-			flt_cc = flt_cr;
-			flt_bc = flt_br;
-			flt_tr = NULL;
-			flt_cr = NULL;
-			flt_br = NULL;
+			flt_tile_delete(&uflt_tl);
+			flt_tile_delete(&uflt_cl);
+			flt_tile_delete(&uflt_bl);
+			flt_tile_delete(&aflt_tl);
+			flt_tile_delete(&aflt_cl);
+			flt_tile_delete(&aflt_bl);
+			uflt_tl = uflt_tc;
+			uflt_cl = uflt_cc;
+			uflt_bl = uflt_bc;
+			uflt_tc = uflt_tr;
+			uflt_cc = uflt_cr;
+			uflt_bc = uflt_br;
+			aflt_tl = aflt_tc;
+			aflt_cl = aflt_cc;
+			aflt_bl = aflt_bc;
+			aflt_tc = aflt_tr;
+			aflt_cc = aflt_cr;
+			aflt_bc = aflt_br;
+			uflt_tr = NULL;
+			uflt_cr = NULL;
+			uflt_br = NULL;
+			aflt_tr = NULL;
+			aflt_cr = NULL;
+			aflt_br = NULL;
 		}
 
 		// next lati
-		flt_tile_delete(&flt_tl);
-		flt_tile_delete(&flt_cl);
-		flt_tile_delete(&flt_bl);
-		flt_tile_delete(&flt_tc);
-		flt_tile_delete(&flt_cc);
-		flt_tile_delete(&flt_bc);
-		flt_tile_delete(&flt_tr);
-		flt_tile_delete(&flt_cr);
-		flt_tile_delete(&flt_br);
+		flt_tile_delete(&uflt_tl);
+		flt_tile_delete(&uflt_cl);
+		flt_tile_delete(&uflt_bl);
+		flt_tile_delete(&uflt_tc);
+		flt_tile_delete(&uflt_cc);
+		flt_tile_delete(&uflt_bc);
+		flt_tile_delete(&uflt_tr);
+		flt_tile_delete(&uflt_cr);
+		flt_tile_delete(&uflt_br);
+		flt_tile_delete(&aflt_tl);
+		flt_tile_delete(&aflt_cl);
+		flt_tile_delete(&aflt_bl);
+		flt_tile_delete(&aflt_tc);
+		flt_tile_delete(&aflt_cc);
+		flt_tile_delete(&aflt_bc);
+		flt_tile_delete(&aflt_tr);
+		flt_tile_delete(&aflt_cr);
+		flt_tile_delete(&aflt_br);
 	}
 
 	cc_jobq_delete(&jobq);
@@ -412,15 +576,24 @@ int main(int argc, char** argv)
 	// failure
 	fail_sample:
 		cc_jobq_finish(jobq);
-		flt_tile_delete(&flt_tl);
-		flt_tile_delete(&flt_cl);
-		flt_tile_delete(&flt_bl);
-		flt_tile_delete(&flt_tc);
-		flt_tile_delete(&flt_cc);
-		flt_tile_delete(&flt_bc);
-		flt_tile_delete(&flt_tr);
-		flt_tile_delete(&flt_cr);
-		flt_tile_delete(&flt_br);
+		flt_tile_delete(&uflt_tl);
+		flt_tile_delete(&uflt_cl);
+		flt_tile_delete(&uflt_bl);
+		flt_tile_delete(&uflt_tc);
+		flt_tile_delete(&uflt_cc);
+		flt_tile_delete(&uflt_bc);
+		flt_tile_delete(&uflt_tr);
+		flt_tile_delete(&uflt_cr);
+		flt_tile_delete(&uflt_br);
+		flt_tile_delete(&aflt_tl);
+		flt_tile_delete(&aflt_cl);
+		flt_tile_delete(&aflt_bl);
+		flt_tile_delete(&aflt_tc);
+		flt_tile_delete(&aflt_cc);
+		flt_tile_delete(&aflt_bc);
+		flt_tile_delete(&aflt_tr);
+		flt_tile_delete(&aflt_cr);
+		flt_tile_delete(&aflt_br);
 		cc_jobq_delete(&jobq);
 		LOGE("FAILURE: dt=%lf", cc_timestamp() - t0);
 	return EXIT_FAILURE;

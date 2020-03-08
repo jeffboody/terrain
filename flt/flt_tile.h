@@ -27,8 +27,12 @@
 #define FLT_MSBFIRST -1
 #define FLT_LSBFIRST 1
 
+#define FLT_TILE_TYPE_USGS    0
+#define FLT_TILE_TYPE_ASTERV3 1
+
 typedef struct
 {
+	int    type;
 	int    lat;
 	int    lon;
 	double lonL;
@@ -42,8 +46,7 @@ typedef struct
 	short* height;
 } flt_tile_t;
 
-flt_tile_t* flt_tile_import(int zoom, int lat, int lon,
-                            int center);
+flt_tile_t* flt_tile_import(int type, int lat, int lon);
 void        flt_tile_delete(flt_tile_t** _self);
 int         flt_tile_sample(flt_tile_t* self,
                             double lat, double lon,
