@@ -332,6 +332,7 @@ int main(int argc, char** argv)
 
 			// uflt_cc may be NULL for sparse data
 			// only sample USGS for z15
+			int sample   = 0;
 			int complete = 0;
 			if(uflt_cc && (zoom == 15))
 			{
@@ -377,6 +378,7 @@ int main(int argc, char** argv)
 					                          lati - 1, lonj + 1);
 				}
 
+				sample   = 1;
 				complete = uflt_tl && uflt_cl && uflt_bl &&
 				           uflt_tc && uflt_cc && uflt_bc &&
 				           uflt_tr && uflt_cr && uflt_br;
@@ -438,9 +440,11 @@ int main(int argc, char** argv)
 					aflt_br = flt_tile_import(FLT_TILE_TYPE_ASTERV3,
 					                          lati - 1, lonj + 1);
 				}
+
+				sample = 1;
 			}
 
-			if(uflt_cc || aflt_cc)
+			if(sample)
 			{
 				// when sampling z15 we want to ensure there are no
 				// cracks in z13 when merging USGS with ASTERv3
