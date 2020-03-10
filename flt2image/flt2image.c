@@ -24,6 +24,7 @@
 #include <limits.h>
 #include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define LOG_TAG "flt2image"
 #include "libcc/cc_log.h"
@@ -35,17 +36,22 @@
 
 int main(int argc, char** argv)
 {
-	if(argc != 3)
+	if(argc != 4)
 	{
-		LOGE("usage: %s [lat] [lon]", argv[0]);
+		LOGE("usage: %s [USGS|ASTERv3] [lat] [lon]", argv[0]);
 		return EXIT_FAILURE;
 	}
 
-	int lat = (int) strtol(argv[1], NULL, 0);
-	int lon = (int) strtol(argv[2], NULL, 0);
+	int type = FLT_TILE_TYPE_USGS;
+	if(strcmp(argv[1], "ASTERv3") == 0)
+	{
+		type = FLT_TILE_TYPE_ASTERV3;
+	}
 
-	// TODO - flt_tile_import
-	flt_tile_t* tile = flt_tile_import(lat, lon);
+	int lat = (int) strtol(argv[2], NULL, 0);
+	int lon = (int) strtol(argv[3], NULL, 0);
+
+	flt_tile_t* tile = flt_tile_import(type, lat, lon);
 	if(tile == NULL)
 	{
 		return EXIT_FAILURE;
@@ -104,7 +110,9 @@ int main(int argc, char** argv)
 		}
 	}
 
-	texgz_png_export(tex, "out.png");
+	char fname[256];
+	snprintf(fname, 256, "out_%s_%i_%i.png", argv[1], lat, lon);
+	texgz_png_export(tex, fname);
 	texgz_tex_delete(&tex);
 
 	flt_tile_delete(&tile);

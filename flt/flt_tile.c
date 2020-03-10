@@ -581,8 +581,11 @@ flt_tile_import(int type, int lat, int lon)
 	char tif_fname[256];
 	char xml_fname[256];
 
+	// USGS is top-left origin
+	// ASTERv3 is bottom-left origin
+	int ulat = lat + 1;
 	snprintf(flt_fbase, 256, "%s%i%s%03i",
-	         (lat >= 0) ? "n" : "s", abs(lat),
+	         (ulat >= 0) ? "n" : "s", abs(ulat),
 	         (lon >= 0) ? "e" : "w", abs(lon));
 	snprintf(flt_fname, 256, "usgs-ned/data/%s/float%s_13",
 	         flt_fbase, flt_fbase);

@@ -107,7 +107,7 @@ int main(int argc, char** argv)
 	}
 
 	char fname[256];
-	snprintf(fname, 256, "out-%i-%i-%i.png", zoom, x, y);
+	snprintf(fname, 256, "out_%i_%i_%i.png", zoom, x, y);
 	texgz_png_export(tex, fname);
 	texgz_tex_delete(&tex);
 	terrain_tile_delete(&tile);
