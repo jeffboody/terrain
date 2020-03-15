@@ -35,6 +35,10 @@ typedef struct
 	int latB;
 	int lonR;
 
+	double t0;
+	double count;
+	double total;
+
 	const char* path;
 
 	// obj cache

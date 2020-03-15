@@ -29,6 +29,7 @@
 #define LOG_TAG "maketerrain"
 #include "libcc/cc_log.h"
 #include "libcc/cc_memory.h"
+#include "libcc/cc_timestamp.h"
 #include "terrain/terrain_util.h"
 #include "mk_state.h"
 
@@ -120,9 +121,10 @@ static void mk_state_trim13(mk_state_t* self)
 	ASSERT(self);
 
 	cc_listIter_t* iter = cc_list_head(self->obj_list);
+	size_t max = (size_t) 4000*MB;
 	while(iter)
 	{
-		if(MEMSIZE() < 2000*MB)
+		if(MEMSIZE() < max)
 		{
 			return;
 		}
@@ -348,6 +350,8 @@ mk_state_prefetch13(mk_state_t* self, int x, int y)
 {
 	ASSERT(self);
 
+	self->count += 1.0;
+
 	self->cnt_usgs  = 0;
 	self->cnt_aster = 0;
 
@@ -368,6 +372,9 @@ mk_state_prefetch13(mk_state_t* self, int x, int y)
 	int lon0 = lon - 1;
 	int lat1 = lat + 1;
 	int lon1 = lon + 1;
+	double dt = cc_timestamp() - self->t0;
+	LOGI("13/%i/%i: lat=%i, lon=%i, dt=%0.3lf, %0.1lf%%",
+	     x, y, lat, lon, dt, 100.0*self->count/self->total);
 	for(row = lat0; row <= lat1; ++row)
 	{
 		for(col = lon0; col <= lon1; ++col)
@@ -516,11 +523,25 @@ mk_state_new(int latT, int lonL, int latB, int lonR,
 		return NULL;
 	}
 
-	self->latT = latT;
-	self->lonL = lonL;
-	self->latB = latB;
-	self->lonR = lonR;
-	self->path = path;
+	float xtl;
+	float ytl;
+	float xbr;
+	float ybr;
+	terrain_coord2tile(latT, lonL, 13, &xtl, &ytl);
+	terrain_coord2tile(latB, lonR, 13, &xbr, &ybr);
+	double w = (double) (xbr - xtl);
+	double h = (double) (ybr - ytl);
+
+	self->latT  = latT;
+	self->lonL  = lonL;
+	self->latB  = latB;
+	self->lonR  = lonR;
+	self->t0    = cc_timestamp();
+	self->total = w*h;
+	self->path  = path;
+
+	LOGI("latT=%i, lonL=%i, latB=%i, lonR=%i, path=%s, total=%lf",
+	     latT, lonL, latB, lonR, path, self->total);
 
 	self->obj_map = cc_map_new();
 	if(self->obj_map == NULL)

@@ -21,10 +21,12 @@
  *
  */
 
+#include <stdint.h>
 #include <stdlib.h>
 
 #define LOG_TAG "maketerrain"
 #include "libcc/cc_log.h"
+#include "libcc/cc_memory.h"
 #include "mk_object.h"
 #include "mk_state.h"
 
@@ -41,7 +43,7 @@ int main(int argc, char** argv)
 	int   lonL = (int) strtol(argv[2], NULL, 0);
 	int   latB = (int) strtol(argv[3], NULL, 0);
 	int   lonR = (int) strtol(argv[4], NULL, 0);
-	char* path = argv[6];
+	char* path = argv[5];
 
 	mk_state_t* state;
 	state = mk_state_new(latT, lonL, latB, lonR, path);
@@ -59,6 +61,12 @@ int main(int argc, char** argv)
 
 	mk_state_put(state, &obj);
 	mk_state_delete(&state);
+
+	// check for memory leak
+	if(MEMSIZE() != 0)
+	{
+		LOGW("memory leak detected: %u", (uint32_t) MEMSIZE());
+	}
 
 	// success
 	return EXIT_SUCCESS;

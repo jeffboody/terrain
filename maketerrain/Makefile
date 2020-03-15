@@ -3,7 +3,7 @@ CLASSES  = mk_state mk_object
 SOURCE   = $(TARGET).c $(CLASSES:%=%.c)
 OBJECTS  = $(TARGET).o $(CLASSES:%=%.o)
 HFILES   = $(CLASSES:%=%.h)
-OPT      = -O2 -Wall
+OPT      = -O2 -Wall -Wno-format-truncation
 CFLAGS   = $(OPT) -I.
 LDFLAGS  = -Llibcc -lcc -Lterrain -lterrain -Lflt -lflt -Llibxmlstream -lxmlstream -Llibexpat/expat/lib -lexpat -ltiff -lpthread -lm -lz
 CCC      = gcc
