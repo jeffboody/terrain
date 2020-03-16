@@ -33,7 +33,7 @@
 #include "terrain/terrain_util.h"
 #include "mk_state.h"
 
-#define MB 1024*1024
+#define MB (1024*1024)
 
 /***********************************************************
 * protected                                                *
@@ -373,8 +373,9 @@ mk_state_prefetch13(mk_state_t* self, int x, int y)
 	int lat1 = lat + 1;
 	int lon1 = lon + 1;
 	double dt = cc_timestamp() - self->t0;
-	LOGI("13/%i/%i: lat=%i, lon=%i, dt=%0.3lf, %0.1lf%%",
-	     x, y, lat, lon, dt, 100.0*self->count/self->total);
+	LOGI("13/%i/%i: lat=%i, lon=%i, dt=%0.3lf, mem=%0.lf MB, %0.1lf%%",
+	     x, y, lat, lon, dt, (double) (MEMSIZE()/MB),
+	     100.0*self->count/self->total);
 	for(row = lat0; row <= lat1; ++row)
 	{
 		for(col = lon0; col <= lon1; ++col)
@@ -642,7 +643,22 @@ mk_state_getTerrain(mk_state_t* self,
 	if(obj)
 	{
 		mk_object_incref(obj);
+		if(zoom == 13)
+		{
+			mk_state_trim13(self);
+		}
 		return obj;
+	}
+
+	// check if the object is null
+	if(zoom <= 13)
+	{
+		cc_mapIter_t miterator;
+		if(cc_map_findf(self->null_map, &miterator,
+		                "%i/%i/%i", zoom, x, y))
+		{
+			return NULL;
+		}
 	}
 
 	// check if the object was created
@@ -650,6 +666,10 @@ mk_state_getTerrain(mk_state_t* self,
 	if(obj)
 	{
 		mk_object_incref(obj);
+		if(zoom == 13)
+		{
+			mk_state_trim13(self);
+		}
 		return obj;
 	}
 
@@ -663,10 +683,13 @@ mk_state_getTerrain(mk_state_t* self,
 		int prefetch = mk_state_prefetch13(self, x, y);
 		if(prefetch == 13)
 		{
-			return mk_state_make(self, x, y, zoom);
+			obj = mk_state_make(self, x, y, zoom);
+			mk_state_trim13(self);
+			return obj;
 		}
 		else if(prefetch == 0)
 		{
+			mk_state_trim13(self);
 			return NULL;
 		}
 		else
@@ -708,6 +731,13 @@ mk_state_getTerrain(mk_state_t* self,
 	// check if sampling can be performed
 	if(done)
 	{
+		if(zoom <= 13)
+		{
+			if(zoom == 13)
+			{
+				mk_state_trim13(self);
+			}
+		}
 		return NULL;
 	}
 
