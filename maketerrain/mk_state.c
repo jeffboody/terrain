@@ -556,10 +556,18 @@ mk_state_new(int latT, int lonL, int latB, int lonR,
 		goto fail_obj_list;
 	}
 
+	self->null_map = cc_map_new();
+	if(self->null_map == NULL)
+	{
+		goto fail_null_map;
+	}
+
 	// success
 	return self;
 
 	// failure
+	fail_null_map:
+		cc_list_delete(&self->obj_list);
 	fail_obj_list:
 		cc_map_delete(&self->obj_map);
 	fail_obj_map:
@@ -590,6 +598,8 @@ void mk_state_delete(mk_state_t** _self)
 			mk_object_delete(&obj);
 		}
 
+		cc_map_discard(self->null_map);
+		cc_map_delete(&self->null_map);
 		cc_list_delete(&self->obj_list);
 		cc_map_delete(&self->obj_map);
 		FREE(self);
@@ -689,6 +699,9 @@ mk_state_getTerrain(mk_state_t* self,
 		}
 		else if(prefetch == 0)
 		{
+			cc_map_addf(self->null_map,
+			            (const void*) &self->null_val,
+			            "%i/%i/%i", zoom, x, y);
 			mk_state_trim13(self);
 			return NULL;
 		}
@@ -733,6 +746,9 @@ mk_state_getTerrain(mk_state_t* self,
 	{
 		if(zoom <= 13)
 		{
+			cc_map_addf(self->null_map,
+			            (const void*) &self->null_val,
+			            "%i/%i/%i", zoom, x, y);
 			if(zoom == 13)
 			{
 				mk_state_trim13(self);

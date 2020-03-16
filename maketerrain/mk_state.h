@@ -52,6 +52,10 @@ typedef struct
 	int cnt_aster;
 	mk_object_t* obj_usgs[9];
 	mk_object_t* obj_aster[9];
+
+	// track null objects
+	int null_val;
+	cc_map_t* null_map;
 } mk_state_t;
 
 mk_state_t*  mk_state_new(int latT, int lonL,
