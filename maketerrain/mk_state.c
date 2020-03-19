@@ -672,15 +672,22 @@ mk_state_getTerrain(mk_state_t* self,
 	}
 
 	// check if the object was created
-	obj = mk_state_importTerrain(self, x, y, zoom);
-	if(obj)
+	// note: this z13 check isn't normally necessary however
+	// due to an unknown error while processing the terrainv1
+	// data these files cannot be trusted and must be
+	// recreated if the z13 level is not found
+	if(zoom <= 13)
 	{
-		mk_object_incref(obj);
-		if(zoom == 13)
+		obj = mk_state_importTerrain(self, x, y, zoom);
+		if(obj)
 		{
-			mk_state_trim13(self);
+			mk_object_incref(obj);
+			if(zoom == 13)
+			{
+				mk_state_trim13(self);
+			}
+			return obj;
 		}
-		return obj;
 	}
 
 	// end recursion
