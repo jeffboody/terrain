@@ -3,7 +3,7 @@ CLASSES  = terrain_tile terrain_util
 SOURCE   = $(CLASSES:%=%.c)
 OBJECTS  = $(SOURCE:.c=.o)
 HFILES   = $(CLASSES:%=%.h)
-OPT      = -O2 -Wall
+OPT      = -O2 -Wall -Wno-format-truncation
 CFLAGS   = $(OPT) -I.
 LDFLAGS  = -lm
 AR       = ar

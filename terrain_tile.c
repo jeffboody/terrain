@@ -25,6 +25,7 @@
 #include <sys/types.h>
 #include <errno.h>
 #include <math.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -310,19 +311,20 @@ int terrain_tile_export(terrain_tile_t* self,
 	ASSERT(base);
 
 	char fname[256];
+	char pname[256];
 	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
 	         base, self->zoom, self->x, self->y);
-	fname[255] = '\0';
+	snprintf(pname, 256, "%s.part", fname);
 
 	if(terrain_mkdir(fname) == 0)
 	{
 		return 0;
 	}
 
-	FILE* f = fopen(fname, "w");
+	FILE* f = fopen(pname, "w");
 	if(f == NULL)
 	{
-		LOGE("invalid %s", fname);
+		LOGE("invalid %s", pname);
 		return 0;
 	}
 
@@ -391,6 +393,7 @@ int terrain_tile_export(terrain_tile_t* self,
 
 	FREE(dst);
 	fclose(f);
+	rename(pname, fname);
 
 	// success
 	return 1;
@@ -402,7 +405,7 @@ int terrain_tile_export(terrain_tile_t* self,
 	fail_dst:
 	fail_header:
 		fclose(f);
-		unlink(fname);
+		unlink(pname);
 	return 0;
 }
 
