@@ -210,7 +210,7 @@ mk_state_importTerrain(mk_state_t* self,
 	// avoid error message if file doesn't exist
 	// since flt files are sparse
 	char fname[256];
-	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+	snprintf(fname, 256, "%s/terrainv1/%i/%i/%i.terrain",
 	         self->path, zoom, x, y);
 	if(access(fname, F_OK) != 0)
 	{

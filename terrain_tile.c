@@ -312,7 +312,7 @@ int terrain_tile_export(terrain_tile_t* self,
 
 	char fname[256];
 	char pname[256];
-	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+	snprintf(fname, 256, "%s/terrainv1/%i/%i/%i.terrain",
 	         base, self->zoom, self->x, self->y);
 	snprintf(pname, 256, "%s.part", fname);
 
@@ -507,9 +507,8 @@ terrain_tile_import(const char* base, int x, int y,
 	ASSERT(base);
 
 	char fname[256];
-	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+	snprintf(fname, 256, "%s/terrainv1/%i/%i/%i.terrain",
 	         base, zoom, x, y);
-	fname[255] = '\0';
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
@@ -620,9 +619,8 @@ int terrain_tile_header(const char* base,
 	ASSERT(flags);
 
 	char fname[256];
-	snprintf(fname, 256, "%s/terrain/%i/%i/%i.terrain",
+	snprintf(fname, 256, "%s/terrainv1/%i/%i/%i.terrain",
 	         base, zoom, x, y);
-	fname[255] = '\0';
 
 	FILE* f = fopen(fname, "r");
 	if(f == NULL)
