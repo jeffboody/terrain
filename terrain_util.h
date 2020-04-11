@@ -35,6 +35,10 @@ void  terrain_coord2xy(double lat, double lon,
                        float* x, float* y);
 void  terrain_xy2coord(float x, float y,
                        double* lat, double* lon);
+void  terrain_geo2xyz(double lat, double lon, float alt,
+                      float* x, float* y, float* z);
+void  terrain_xyz2geo(float x, float y, float z,
+                      double* lat, double* lon, float* alt);
 void  terrain_bounds(int x, int y, int zoom,
                      double* latT, double* lonL,
                      double* latB, double* lonR);

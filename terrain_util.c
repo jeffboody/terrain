@@ -29,6 +29,27 @@
 #define LOG_TAG "terrain"
 #include "../libcc/cc_log.h"
 
+/*
+ * See geodetic algorithms by Karl Osen
+ *
+ * Accurate Conversion of Earth-Fixed Earth-Centered
+ * Coordinates to Geodetic Coordinates
+ *
+ */
+
+#define WGS84_AADC     +7.79540464078689228919e+0007 // (a^2)/c
+#define WGS84_BBDCC    +1.48379031586596594555e+0002 // (b^2)/(c^2)
+#define WGS84_EED2     +3.34718999507065852867e-0003 // (e^2)/2
+#define WGS84_EEEED4   +1.12036808631011150655e-0005 // (e^4)/4
+#define WGS84_EEEE     +4.48147234524044602618e-0005 // e^4
+#define WGS84_HMIN     +2.25010182030430273673e-0014 // (e^12)/4
+#define WGS84_INV3     +3.33333333333333333333e-0001 // 1/3
+#define WGS84_INV6     +1.66666666666666666667e-0001 // 1/6
+#define WGS84_INVAA    +2.45817225764733181057e-0014 // 1/(a^2)
+#define WGS84_INVCBRT2 +7.93700525984099737380e-0001 // 1/(2^(1/3))
+#define WGS84_P1MEE    +9.93305620009858682943e-0001 // 1-(e^2)
+#define WGS84_P1MEEDAA +2.44171631847341700642e-0014 // (1-(e^2))/(a^2)
+
 void terrain_tile2coord(float x, float y, int zoom,
                         double* lat, double* lon)
 {
@@ -114,6 +135,175 @@ void terrain_xy2coord(float x, float y,
 	double yd = (double) y;
 	*lat = (yd/lat2meter) + home_lat;
 	*lon = (xd/lon2meter) + home_lon;
+}
+
+void terrain_geo2xyz(double lat, double lon, float alt,
+                     float* x, float* y, float* z)
+{
+	ASSERT(x);
+	ASSERT(y);
+	ASSERT(z);
+
+	/*
+	 * See geodetic algorithms by Karl Osen
+	 *
+	 * Accurate Conversion of Earth-Fixed Earth-Centered
+	 * Coordinates to Geodetic Coordinates
+	 *
+	 */
+
+	const static double aadc  = WGS84_AADC;
+	const static double bbdcc = WGS84_BBDCC;
+	const static double p1mee = WGS84_P1MEE;
+
+	// convert lat/lon to radians
+	lat *= M_PI/180.0;
+	lon *= M_PI/180.0;
+
+	double coslat = cos(lat);
+	double sinlat = sin(lat);
+	double coslon = cos(lon);
+	double sinlon = sin(lon);
+	double N = aadc/sqrt(coslat*coslat + bbdcc);
+	double d = (N + alt)*coslat;
+	*x = d*coslon;
+	*y = d*sinlon;
+	*z = (p1mee*N + alt)*sinlat;
+}
+
+void terrain_xyz2geo(float x, float y, float z,
+                     double* lat, double* lon, float* alt)
+{
+	ASSERT(lat);
+	ASSERT(lon);
+	ASSERT(alt);
+
+	/*
+	 * See geodetic algorithms by Karl Osen
+	 *
+	 * Accurate Conversion of Earth-Fixed Earth-Centered
+	 * Coordinates to Geodetic Coordinates
+	 *
+	 */
+
+	const static double Hmin     = WGS84_HMIN;
+	const static double inv3     = WGS84_INV3;
+	const static double inv6     = WGS84_INV6;
+	const static double invaa    = WGS84_INVAA;
+	const static double invcbrt2 = WGS84_INVCBRT2;
+	const static double l        = WGS84_EED2;
+	const static double ll4      = WGS84_EEEE;
+	const static double ll       = WGS84_EEEED4;
+	const static double p1meedaa = WGS84_P1MEEDAA;
+	const static double p1mee    = WGS84_P1MEE;
+
+	double beta;
+	double C;
+	double dFdt;
+	double dt;
+	double dw;
+	double dz;
+	double F;
+	double G;
+	double H;
+	double i;
+	double k;
+	double m;
+	double n;
+	double p;
+	double P;
+	double t;
+	double u;
+	double v;
+	double w;
+
+	// intermediate variables
+	double j;
+	double ww;    // w^2
+	double mpn;   // m+n
+	double g;
+	double tt;    // t^2
+	double ttt;   // t^3
+	double tttt;  // t^4
+	double zu;    // z * u
+	double wv;    // w * v
+	double invuv; // 1 / (u * v)
+	double da;
+	double t1, t2, t3, t4, t5, t6, t7;
+
+	double xd = (double) x;
+	double yd = (double) y;
+	double zd = (double) z;
+
+	ww  = xd*xd + yd*yd;
+	m   = ww*invaa;
+	n   = zd*zd*p1meedaa;
+	mpn = m + n;
+	p   = inv6*(mpn - ll4);
+	G   = m*n*ll;
+	H   = 2*p*p*p + G;
+
+	if(H < Hmin)
+	{
+		LOGW("invalid H=%lf, Hmin=%lf", H, Hmin);
+		*lat = 0.0;
+		*lon = 0.0;
+		*alt = 0.0f;
+		return;
+	}
+
+	C    = pow(H + G + 2*sqrt(H*G), inv3)*invcbrt2;
+	i    = -ll - 0.5*mpn;
+	P    = p * p;
+	beta = inv3*i - C - P/C;
+	k    = ll*(ll - mpn);
+
+	// compute left part of t
+	t1 = beta*beta - k;
+	t2 = sqrt(t1);
+	t3 = t2 - 0.5*(beta + i);
+	t4 = sqrt(t3);
+
+	// compute right part of t
+	t5 = 0.5*(beta - i);
+
+	// t5 may accidentally drop just below zero due to numeric
+	// turbulence (this only occurs at latitudes close to
+	// +/- 45.3 degrees)
+	t5 = fabs(t5);
+	t6 = sqrt(t5);
+	t7 = (m < n) ? t6 : -t6;
+
+	// add left and right parts
+	t = t4 + t7;
+
+	// use Newton-Raphson's method to compute t correction
+	j    = l*(m - n);
+	g    = 2*j;
+	tt   = t*t;
+	ttt  = tt*t;
+	tttt = tt*tt;
+	F    = tttt + 2*i*tt + g*t + k;
+	dFdt = 4*ttt + 4*i*t + g;
+	dt   = -F/dFdt;
+
+	// compute latitude (range -PI/2..PI/2)
+	u    = t + dt + l;
+	v    = t + dt - l;
+	w    = sqrt(ww);
+	zu   = zd*u;
+	wv   = w*v;
+	*lat = atan2(zu, wv)*180.0/M_PI;
+
+	// compute altitude
+	invuv = 1.0/(u*v);
+	dw    = w - wv*invuv;
+	dz    = zd - zu*p1mee*invuv;
+	da    = sqrt(dw*dw + dz*dz);
+	*alt  = (float) ((u < 1.0) ? -da : da);
+
+	// compute longitude (range -PI..PI)
+	*lon = atan2(yd, xd)*180.0/M_PI;
 }
 
 void terrain_bounds(int x, int y, int zoom,
