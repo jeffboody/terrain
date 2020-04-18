@@ -39,6 +39,10 @@ void  terrain_geo2xyz(double lat, double lon, float alt,
                       float* x, float* y, float* z);
 void  terrain_xyz2geo(float x, float y, float z,
                       double* lat, double* lon, float* alt);
+void  terrain_xyz2xyh(float x1, float y1, float z1,
+                      float* x2, float* y2, float* alt);
+void  terrain_xyh2xyz(float x1, float y1, float alt,
+                      float* x2, float* y2, float* z);
 void  terrain_bounds(int x, int y, int zoom,
                      double* latT, double* lonL,
                      double* latB, double* lonR);

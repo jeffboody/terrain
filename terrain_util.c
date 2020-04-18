@@ -306,6 +306,32 @@ void terrain_xyz2geo(float x, float y, float z,
 	*lon = atan2(yd, xd)*180.0/M_PI;
 }
 
+void terrain_xyz2xyh(float x1, float y1, float z1,
+                     float* x2, float* y2, float* alt)
+{
+	ASSERT(x2);
+	ASSERT(y2);
+	ASSERT(alt);
+
+	double lat;
+	double lon;
+	terrain_xyz2geo(x1, y1, z1, &lat, &lon, alt);
+	terrain_coord2xy(lat, lon, x2, y2);
+}
+
+void terrain_xyh2xyz(float x1, float y1, float alt,
+                     float* x2, float* y2, float* z2)
+{
+	ASSERT(x2);
+	ASSERT(y2);
+	ASSERT(z2);
+
+	double lat;
+	double lon;
+	terrain_xy2coord(x1, y1, &lat, &lon);
+	terrain_geo2xyz(lat, lon, alt, x2, y2, z2);
+}
+
 void terrain_bounds(int x, int y, int zoom,
                     double* latT, double* lonL,
                     double* latB, double* lonR)
