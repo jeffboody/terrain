@@ -210,7 +210,7 @@ mk_state_importTerrain(mk_state_t* self,
 	// avoid error message if file doesn't exist
 	// since flt files are sparse
 	char fname[256];
-	snprintf(fname, 256, "%s/terrainv1/%i/%i/%i.terrain",
+	snprintf(fname, 256, "%s/terrainv2/%i/%i/%i.terrain",
 	         self->path, zoom, x, y);
 	if(access(fname, F_OK) != 0)
 	{
@@ -673,7 +673,7 @@ mk_state_getTerrain(mk_state_t* self,
 
 	// check if the object was created
 	// note: this z13 check isn't normally necessary however
-	// due to an unknown error while processing the terrainv1
+	// due to an unknown error while processing the terrainv2
 	// data these files cannot be trusted and must be
 	// recreated if the z13 level is not found
 	if(zoom <= 13)
