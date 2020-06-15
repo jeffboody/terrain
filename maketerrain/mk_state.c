@@ -361,7 +361,7 @@ mk_state_prefetch13(mk_state_t* self, int x, int y)
 	double latB;
 	double lonR;
 	terrain_bounds(x, y, 13, &latT, &lonL, &latB, &lonR);
-	int lat = (int) latT;
+	int lat = (int) latB;
 	int lon = (int) lonL;
 
 	// check if flt exists for surrounding USGS tiles
