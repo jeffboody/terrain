@@ -737,7 +737,6 @@ short terrain_tile_get(terrain_tile_t* self, int m, int n)
 	if((m < 0) || (m >= samples) ||
 	   (n < 0) || (n >= samples))
 	{
-		LOGW("invalid m=%i, n=%i", m, n);
 		return TERRAIN_NODATA;
 	}
 
