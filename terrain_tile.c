@@ -608,6 +608,57 @@ terrain_tile_importf(FILE* f, int size, int x, int y,
 	return NULL;
 }
 
+terrain_tile_t*
+terrain_tile_importd(size_t size,
+                     const unsigned char* buffer,
+                     int x, int y, int zoom)
+{
+	ASSERT(buffer);
+
+	terrain_tile_t* self;
+	self = (terrain_tile_t*)
+	       CALLOC(1, sizeof(terrain_tile_t));
+	if(self == NULL)
+	{
+		LOGE("CALLOC failed");
+		return NULL;
+	}
+
+	if(terrain_tile_headerb(buffer, size,
+	                        &self->min, &self->max,
+	                        &self->flags) == 0)
+	{
+		goto fail_header;
+	}
+
+	// uncompress buffer
+	uLong        dst_size = TERRAIN_SAMPLES_TOTAL*
+	                        TERRAIN_SAMPLES_TOTAL*
+	                        sizeof(short);
+	Bytef*       dst      = (Bytef*) self->data;
+	const Bytef* src      = (const Bytef*)
+	                        (buffer + TERRAIN_HSIZE);
+	uLong        src_size = size - TERRAIN_HSIZE;
+	if(uncompress(dst, &dst_size, src, src_size) != Z_OK)
+	{
+		LOGE("fail uncompress");
+		goto fail_uncompress;
+	}
+
+	self->x    = x;
+	self->y    = y;
+	self->zoom = zoom;
+
+	// success
+	return self;
+
+	// failure
+	fail_uncompress:
+	fail_header:
+		FREE(self);
+	return NULL;
+}
+
 int terrain_tile_header(const char* base,
                         int x, int y, int zoom,
                         short* min, short* max,
@@ -645,7 +696,7 @@ int terrain_tile_header(const char* base,
 	return 0;
 }
 
-int terrain_tile_headerb(unsigned char* buffer,
+int terrain_tile_headerb(const unsigned char* buffer,
                          int size,
                          short* min, short* max,
                          int* flags)
