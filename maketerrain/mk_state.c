@@ -98,18 +98,18 @@ mk_state_evictObject(mk_state_t* self,
 		ASSERT(mk_object_refcount(obj) == 0);
 
 		// find/remove object from map
-		char          key[256];
-		cc_mapIter_t  miterator;
-		cc_mapIter_t* miter = &miterator;
+		char key[256];
 		mk_object_key(obj, key);
-		if(cc_map_find(self->obj_map, miter, key))
+
+		cc_mapIter_t* miter = cc_map_find(self->obj_map, key);
+		if(miter)
 		{
 			ASSERT(obj == cc_map_val(miter));
 			cc_map_remove(self->obj_map, &miter);
 		}
 		else
 		{
-			LOGE("invalid");
+			LOGE("invalid key=%s", key);
 		}
 
 		mk_object_delete(&obj);
@@ -148,17 +148,17 @@ mk_state_findTerrain(mk_state_t* self,
 {
 	ASSERT(self);
 
-	cc_mapIter_t   miterator;
-	cc_listIter_t* iter;
-	iter = (cc_listIter_t*)
-	       cc_map_findf(self->obj_map, &miterator,
-	                    "T/%i/%i/%i", zoom, x, y);
-	if(iter == NULL)
+	cc_mapIter_t* miter;
+	miter = cc_map_findf(self->obj_map, "T/%i/%i/%i",
+	                     zoom, x, y);
+	if(miter == NULL)
 	{
 		return NULL;
 	}
 
 	// update LRU
+	cc_listIter_t* iter;
+	iter = (cc_listIter_t*) cc_map_val(miter);
 	cc_list_moven(self->obj_list, iter, NULL);
 
 	return (mk_object_t*) cc_list_peekIter(iter);
@@ -185,7 +185,7 @@ mk_state_newTerrain(mk_state_t* self,
 	}
 
 	if(cc_map_addf(self->obj_map, (const void*) iter,
-	               "T/%i/%i/%i", zoom, x, y) == 0)
+	               "T/%i/%i/%i", zoom, x, y) == NULL)
 	{
 		goto fail_map;
 	}
@@ -233,7 +233,7 @@ mk_state_importTerrain(mk_state_t* self,
 	}
 
 	if(cc_map_addf(self->obj_map, (const void*) iter,
-	               "T/%i/%i/%i", zoom, x, y) == 0)
+	               "T/%i/%i/%i", zoom, x, y) == NULL)
 	{
 		goto fail_map;
 	}
@@ -255,17 +255,17 @@ mk_state_findFlt(mk_state_t* self,
 {
 	ASSERT(self);
 
-	cc_mapIter_t   miterator;
-	cc_listIter_t* iter;
-	iter = (cc_listIter_t*)
-	       cc_map_findf(self->obj_map, &miterator,
-	                    "F/%i/%i/%i", type, lat, lon);
-	if(iter == NULL)
+	cc_mapIter_t* miter;
+	miter = cc_map_findf(self->obj_map, "F/%i/%i/%i",
+	                     type, lat, lon);
+	if(miter == NULL)
 	{
 		return NULL;
 	}
 
 	// update LRU
+	cc_listIter_t* iter;
+	iter = (cc_listIter_t*) cc_map_val(miter);
 	cc_list_moven(self->obj_list, iter, NULL);
 
 	return (mk_object_t*) cc_list_peekIter(iter);
@@ -329,7 +329,7 @@ mk_state_getFlt(mk_state_t* self, int type,
 	}
 
 	if(cc_map_addf(self->obj_map, (const void*) iter,
-	               "F/%i/%i/%i", type, lat, lon) == 0)
+	               "F/%i/%i/%i", type, lat, lon) == NULL)
 	{
 		goto fail_map;
 	}
@@ -582,9 +582,7 @@ void mk_state_delete(mk_state_t** _self)
 	mk_state_t* self = *_self;
 	if(self)
 	{
-		cc_mapIter_t  miterator;
-		cc_mapIter_t* miter;
-		miter = cc_map_head(self->obj_map, &miterator);
+		cc_mapIter_t* miter = cc_map_head(self->obj_map);
 		while(miter)
 		{
 			cc_listIter_t* iter;
@@ -663,9 +661,8 @@ mk_state_getTerrain(mk_state_t* self,
 	// check if the object is null
 	if(zoom <= 13)
 	{
-		cc_mapIter_t miterator;
-		if(cc_map_findf(self->null_map, &miterator,
-		                "%i/%i/%i", zoom, x, y))
+		if(cc_map_findf(self->null_map, "%i/%i/%i",
+		                zoom, x, y))
 		{
 			return NULL;
 		}

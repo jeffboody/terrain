@@ -507,16 +507,16 @@ flt_tile_importtif(flt_tile_t* self, const char* fname)
 }
 
 static int
-flt_tile_xmlStart(void* priv, int line, const char* name,
-                  const char** atts)
+flt_tile_xmlStart(void* priv, int line, float progress,
+                  const char* name, const char** atts)
 {
 	// ignore
 	return 1;
 }
 
 static int
-flt_tile_xmlEnd(void* priv, int line, const char* name,
-                const char* content)
+flt_tile_xmlEnd(void* priv, int line, float progress,
+                const char* name, const char* content)
 {
 	// content may be NULL
 	ASSERT(priv);
