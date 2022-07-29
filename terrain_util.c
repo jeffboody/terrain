@@ -56,6 +56,8 @@ void terrain_tile2coord(float x, float y, int zoom,
 	ASSERT(lat);
 	ASSERT(lon);
 
+	// TODO - convert terrain_tile2coord to double
+
 	double worldu  = x/pow(2.0, (double) zoom);
 	double worldv  = y/pow(2.0, (double) zoom);
 	double cartx   = 2.0*M_PI*worldu;
@@ -91,6 +93,8 @@ void  terrain_coord2tile(double lat, double lon, int zoom,
 	ASSERT(x);
 	ASSERT(y);
 
+	// TODO - convert terrain_coord2tile to double
+
 	double rad_lat = (double) lat*M_PI/180.0;
 	double rad_lon = (double) lon*M_PI/180.0;
 	double mercx   = rad_lon;
@@ -109,6 +113,8 @@ void terrain_coord2xy(double lat, double lon,
 	ASSERT(x);
 	ASSERT(y);
 
+	// TODO - depreciate terrain_coord2xy
+
 	// use home as the origin
 	double lat2meter = 111072.12110934;
 	double lon2meter = 85337.868965619;
@@ -125,6 +131,8 @@ void terrain_xy2coord(float x, float y,
 	ASSERT(lat);
 	ASSERT(lon);
 
+	// TODO - depreciate terrain_xy2coord
+
 	// use home as the origin
 	double lat2meter = 111072.12110934;
 	double lon2meter = 85337.868965619;
@@ -138,7 +146,7 @@ void terrain_xy2coord(float x, float y,
 }
 
 void terrain_geo2xyz(double lat, double lon, float alt,
-                     float* x, float* y, float* z)
+                     double* x, double* y, double* z)
 {
 	ASSERT(x);
 	ASSERT(y);
@@ -171,7 +179,7 @@ void terrain_geo2xyz(double lat, double lon, float alt,
 	*z = (p1mee*N + alt)*sinlat;
 }
 
-void terrain_xyz2geo(float x, float y, float z,
+void terrain_xyz2geo(double x, double y, double z,
                      double* lat, double* lon, float* alt)
 {
 	ASSERT(lat);
@@ -231,13 +239,9 @@ void terrain_xyz2geo(float x, float y, float z,
 	double da;
 	double t1, t2, t3, t4, t5, t6, t7;
 
-	double xd = (double) x;
-	double yd = (double) y;
-	double zd = (double) z;
-
-	ww  = xd*xd + yd*yd;
+	ww  = x*x + y*y;
 	m   = ww*invaa;
-	n   = zd*zd*p1meedaa;
+	n   = z*z*p1meedaa;
 	mpn = m + n;
 	p   = inv6*(mpn - ll4);
 	G   = m*n*ll;
@@ -291,19 +295,19 @@ void terrain_xyz2geo(float x, float y, float z,
 	u    = t + dt + l;
 	v    = t + dt - l;
 	w    = sqrt(ww);
-	zu   = zd*u;
+	zu   = z*u;
 	wv   = w*v;
 	*lat = atan2(zu, wv)*180.0/M_PI;
 
 	// compute altitude
 	invuv = 1.0/(u*v);
 	dw    = w - wv*invuv;
-	dz    = zd - zu*p1mee*invuv;
+	dz    = z - zu*p1mee*invuv;
 	da    = sqrt(dw*dw + dz*dz);
 	*alt  = (float) ((u < 1.0) ? -da : da);
 
 	// compute longitude (range -PI..PI)
-	*lon = atan2(yd, xd)*180.0/M_PI;
+	*lon = atan2(y, x)*180.0/M_PI;
 }
 
 void terrain_xyz2xyh(float x1, float y1, float z1,
@@ -312,6 +316,8 @@ void terrain_xyz2xyh(float x1, float y1, float z1,
 	ASSERT(x2);
 	ASSERT(y2);
 	ASSERT(alt);
+
+	// TODO - depreciate terrain_xyz2xyh
 
 	double lat;
 	double lon;
@@ -326,10 +332,18 @@ void terrain_xyh2xyz(float x1, float y1, float alt,
 	ASSERT(y2);
 	ASSERT(z2);
 
+	// TODO - depreciate terrain_xyh2xyz
+
 	double lat;
 	double lon;
+	double  x2d;
+	double  y2d;
+	double  z2d;
 	terrain_xy2coord(x1, y1, &lat, &lon);
-	terrain_geo2xyz(lat, lon, alt, x2, y2, z2);
+	terrain_geo2xyz(lat, lon, alt, &x2d, &y2d, &z2d);
+	*x2 = x2d;
+	*y2 = y2d;
+	*z2 = z2d;
 }
 
 void terrain_bounds(int x, int y, int zoom,
