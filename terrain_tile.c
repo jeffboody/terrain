@@ -162,6 +162,38 @@ static int swapendian(int i)
 }
 
 static void
+terrain_tile_computeNormalf(terrain_tile_t* self,
+                            int i, int j, float dx, float dy,
+                            float* pnx, float* pny,
+                            float* pnz)
+{
+	ASSERT(self);
+	ASSERT(pnx);
+	ASSERT(pny);
+	ASSERT(pnz);
+
+	// get height of center/north/east samples in meters
+	float hc = terrain_ft2m(terrain_tile_get(self, i, j));
+	float hn = terrain_ft2m(terrain_tile_get(self, i - 1, j));
+	float he = terrain_ft2m(terrain_tile_get(self, i, j + 1));
+
+	// compute normal vector n
+	cc_vec3f_t nx;
+	cc_vec3f_t ny;
+	cc_vec3f_t n;
+	cc_vec3f_load(&nx, dx, 0.0f, he - hc);
+	cc_vec3f_load(&ny, 0.0f, dy, hn - hc);
+	cc_vec3f_normalize(&nx);
+	cc_vec3f_normalize(&ny);
+	cc_vec3f_cross_copy(&nx, &ny, &n);
+	cc_vec3f_normalize(&n);
+
+	*pnx = n.x;
+	*pny = n.y;
+	*pnz = n.z;
+}
+
+static void
 terrain_tile_computeNormal(terrain_tile_t* self,
                            int i, int j, float dx, float dy,
                            unsigned char* pnx,
@@ -171,27 +203,18 @@ terrain_tile_computeNormal(terrain_tile_t* self,
 	ASSERT(pnx);
 	ASSERT(pny);
 
-	// get height of c/n/e samples in meters
-	float c = terrain_ft2m(terrain_tile_get(self, i, j));
-	float n = terrain_ft2m(terrain_tile_get(self, i - 1, j));
-	float e = terrain_ft2m(terrain_tile_get(self, i, j + 1));
+	// compute normal vector n
+	float nx;
+	float ny;
+	float nz;
+	terrain_tile_computeNormalf(self, i, j, dx, dy,
+	                            &nx, &ny, &nz);
 
-	// compute normal vector nz
-	cc_vec3f_t nx;
-	cc_vec3f_t ny;
-	cc_vec3f_t nz;
-	cc_vec3f_load(&nx, dx, 0.0f, e - c);
-	cc_vec3f_load(&ny, 0.0f, dy, n - c);
-	cc_vec3f_normalize(&nx);
-	cc_vec3f_normalize(&ny);
-	cc_vec3f_cross_copy(&nx, &ny, &nz);
-	cc_vec3f_normalize(&nz);
-
-	// scale components such that nz.z is 1.0 so that we only
-	// need to store nz.x and nz.y in the normal map texture
-	nz.x /= nz.z;
-	nz.y /= nz.z;
-	nz.z /= nz.z;
+	// scale components such that nz is 1.0 so that we only
+	// need to store nx and ny in the normal map texture
+	nx /= nz;
+	ny /= nz;
+	nz /= nz;
 
 	// clamp steep normals (>63.4 degrees) so that more common
 	// shallow normals may be stored in 8-bit per component
@@ -199,18 +222,18 @@ terrain_tile_computeNormal(terrain_tile_t* self,
 	// up:    normalize(vec3(0.0, 0.0, 1.0))
 	// clamp: normalize(vec3(2.0, 0.0, 1.0))
 	// dot(up, clamp) = 0.447 = cos(63.4)
-	if(nz.x < -2.0f) { nz.x = -2.0f; }
-	if(nz.x >  2.0f) { nz.x =  2.0f; }
-	if(nz.y < -2.0f) { nz.y = -2.0f; }
-	if(nz.y >  2.0f) { nz.y =  2.0f; }
+	if(nx < -2.0f) { nx = -2.0f; }
+	if(nx >  2.0f) { nx =  2.0f; }
+	if(ny < -2.0f) { ny = -2.0f; }
+	if(ny >  2.0f) { ny =  2.0f; }
 
-	// scale nz.x and nz.y to (0.0, 1.0)
-	nz.x = (nz.x/4.0f) + 0.5f;
-	nz.y = (nz.y/4.0f) + 0.5f;
+	// scale nx and ny to (0.0, 1.0)
+	nx = (nx/4.0f) + 0.5f;
+	ny = (ny/4.0f) + 0.5f;
 
-	// scale nz.x and nz.y to (0, 255)
-	*pnx = (unsigned char) (nz.x*255.0f);
-	*pny = (unsigned char) (nz.y*255.0f);
+	// scale nx and ny to (0, 255)
+	*pnx = (unsigned char) (nx*255.0f);
+	*pny = (unsigned char) (ny*255.0f);
 }
 
 /***********************************************************
@@ -787,6 +810,9 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 	ASSERT(self);
 	ASSERT(data);
 
+	// int S = TERRAIN_SAMPLES_NORMAL;
+	// unsigned char data[2*S*S];
+
 	// compute coordinates of neighboring points
 	float  x0;
 	float  y0;
@@ -815,8 +841,52 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 			int idx = 2*(TERRAIN_SAMPLES_NORMAL*i + j);
 			unsigned char* pnx = &(data[idx]);
 			unsigned char* pny = &(data[idx + 1]);
-			terrain_tile_computeNormal(self, i, j,
-			                           dx, dy, pnx, pny);
+			terrain_tile_computeNormal(self, i, j, dx, dy,
+			                           pnx, pny);
+		}
+	}
+}
+
+void terrain_tile_getNormalMapf(terrain_tile_t* self,
+                                float* data)
+{
+	ASSERT(self);
+	ASSERT(data);
+
+	// int S = TERRAIN_SAMPLES_NORMAL;
+	// float data[3*S*S];
+
+	// compute coordinates of neighboring points
+	float  x0;
+	float  y0;
+	float  x1;
+	float  y1;
+	double lat0;
+	double lon0;
+	double lat1;
+	double lon1;
+	terrain_tile_coord(self, 0, 0, &lat0, &lon0);
+	terrain_tile_coord(self, 1, 1, &lat1, &lon1);
+	terrain_coord2xy(lat0, lon0, &x0, &y0);
+	terrain_coord2xy(lat1, lon1, &x1, &y1);
+
+	// compute dx and dy in meters
+	float dx = x1 - x0;
+	float dy = y0 - y1;
+
+	// compute normal map
+	int i;
+	int j;
+	for(i = 0; i < TERRAIN_SAMPLES_NORMAL; ++i)
+	{
+		for(j = 0; j < TERRAIN_SAMPLES_NORMAL; ++j)
+		{
+			int idx = 3*(TERRAIN_SAMPLES_NORMAL*i + j);
+			float* pnx = &(data[idx]);
+			float* pny = &(data[idx + 1]);
+			float* pnz = &(data[idx + 2]);
+			terrain_tile_computeNormalf(self, i, j, dx, dy,
+			                            pnx, pny, pnz);
 		}
 	}
 }
