@@ -32,6 +32,7 @@
 #include <zlib.h>
 
 #define LOG_TAG "terrain"
+#include "../libcc/math/cc_vec3f.h"
 #include "../libcc/cc_log.h"
 #include "../libcc/cc_memory.h"
 #include "terrain_tile.h"
@@ -160,51 +161,6 @@ static int swapendian(int i)
 	return o;
 }
 
-static short
-terrain_tile_interpolate(terrain_tile_t* self,
-                         float u, float v)
-{
-	ASSERT(self);
-
-	// "float indices"
-	float pu = u*(TERRAIN_SAMPLES_TILE - 1);
-	float pv = v*(TERRAIN_SAMPLES_TILE - 1);
-
-	// determine first pair of indices
-	int n0  = floorf(pu);
-	int m0  = floorf(pv);
-	int min = -TERRAIN_SAMPLES_BORDER;
-	if(n0 < min) { n0 = min; }
-	if(m0 < min) { m0 = min; }
-
-	// determine the second pair of indices
-	int n1  = n0 + 1;
-	int m1  = m0 + 1;
-	int max = TERRAIN_SAMPLES_TILE +
-	          TERRAIN_SAMPLES_BORDER - 1;
-	if(n1 > max) { n1 = max; }
-	if(m1 > max) { m1 = max; }
-
-	// sample interpolation values
-	float h00 = (float) terrain_tile_get(self, m0, n0);
-	float h01 = (float) terrain_tile_get(self, m0, n1);
-	float h10 = (float) terrain_tile_get(self, m1, n0);
-	float h11 = (float) terrain_tile_get(self, m1, n1);
-
-	// compute interpolation coordinates
-	float s0 = (float) n0;
-	float t0 = (float) m0;
-	float s  = pu - s0;
-	float t  = pv - t0;
-
-	// interpolate v
-	float h0010 = h00 + t*(h10 - h00);
-	float h0111 = h01 + t*(h11 - h01);
-
-	// interpolate u
-	return (short) (h0010 + s*(h0111 - h0010) + 0.5f);
-}
-
 static void
 terrain_tile_computeNormal(terrain_tile_t* self,
                            int i, int j, float dx, float dy,
@@ -215,89 +171,46 @@ terrain_tile_computeNormal(terrain_tile_t* self,
 	ASSERT(pnx);
 	ASSERT(pny);
 
-	// compute the distance to next sample
-	float dist = 1.0f/(float) TERRAIN_SAMPLES_TILE;
+	// get height of c/n/e samples in meters
+	float c = terrain_ft2m(terrain_tile_get(self, i, j));
+	float n = terrain_ft2m(terrain_tile_get(self, i - 1, j));
+	float e = terrain_ft2m(terrain_tile_get(self, i, j + 1));
 
-	// interpolate n/e/s/w samples
-	float fmax = (float) (TERRAIN_SAMPLES_NORMAL - 1);
-	float u    = (float) j/fmax;
-	float v    = (float) i/fmax;
-	short n    = terrain_tile_interpolate(self, u, v - dist);
-	short e    = terrain_tile_interpolate(self, u + dist, v);
-	short s    = terrain_tile_interpolate(self, u, v + dist);
-	short w    = terrain_tile_interpolate(self, u - dist, v);
+	// compute normal vector nz
+	cc_vec3f_t nx;
+	cc_vec3f_t ny;
+	cc_vec3f_t nz;
+	cc_vec3f_load(&nx, dx, 0.0f, e - c);
+	cc_vec3f_load(&ny, 0.0f, dy, n - c);
+	cc_vec3f_normalize(&nx);
+	cc_vec3f_normalize(&ny);
+	cc_vec3f_cross_copy(&nx, &ny, &nz);
+	cc_vec3f_normalize(&nz);
 
-#if 1
-	// compute normal from (1,0,dzdx)x(0,1,dzdy).
-	// mask:
-	//        -0.5*n
-	// -0.5*w  (u,v) 0.5*e
-	//         0.5*s
-	// (-dzdx, -dzdy, 1) = (nx, ny, 1)
-	// normalize dx,dy to 1
-	float dzdx = 0.5f*(e - w);
-	float dzdy = 0.5f*(s - n);
-#else
-	short nw;
-	short ne;
-	short sw;
-	short se;
-	nw = terrain_tile_interpolate(self, u - dist, v - dist);
-	ne = terrain_tile_interpolate(self, u + dist, v - dist);
-	sw = terrain_tile_interpolate(self, u - dist, v + dist);
-	se = terrain_tile_interpolate(self, u + dist, v + dist);
+	// scale components such that nz.z is 1.0 so that we only
+	// need to store nz.x and nz.y in the normal map texture
+	nz.x /= nz.z;
+	nz.y /= nz.z;
+	nz.z /= nz.z;
 
-	// initialize edge masks
-	float mask_x[] =
-	{
-		-1.0f/4.0f, 0.0f, 1.0f/4.0f,
-		-2.0f/4.0f, 0.0f, 2.0f/4.0f,
-		-1.0f/4.0f, 0.0f, 1.0f/4.0f,
-	};
-	float mask_y[] =
-	{
-		-1.0f/4.0f, -2.0f/4.0f, -1.0f/4.0f,
-		      0.0f,       0.0f,       0.0f,
-		 1.0f/4.0f,  2.0f/4.0f,  1.0f/4.0f,
-	};
+	// clamp steep normals (>63.4 degrees) so that more common
+	// shallow normals may be stored in 8-bit per component
+	// textures with better accuracy
+	// up:    normalize(vec3(0.0, 0.0, 1.0))
+	// clamp: normalize(vec3(2.0, 0.0, 1.0))
+	// dot(up, clamp) = 0.447 = cos(63.4)
+	if(nz.x < -2.0f) { nz.x = -2.0f; }
+	if(nz.x >  2.0f) { nz.x =  2.0f; }
+	if(nz.y < -2.0f) { nz.y = -2.0f; }
+	if(nz.y >  2.0f) { nz.y =  2.0f; }
 
-	// compute dzx, dzy
-	float dzdx;
-	float dzdy;
-	dzdx  = nw*mask_x[0];
-	dzdy  = nw*mask_y[0];
-	dzdy += n*mask_y[1];
-	dzdx += ne*mask_x[2];
-	dzdy += ne*mask_y[2];
-	dzdx += w*mask_x[3];
-	dzdx += e*mask_x[5];
-	dzdx += se*mask_x[6];
-	dzdy += se*mask_y[6];
-	dzdy += s*mask_y[7];
-	dzdx += sw*mask_x[8];
-	dzdy += sw*mask_y[8];
-#endif
+	// scale nz.x and nz.y to (0.0, 1.0)
+	nz.x = (nz.x/4.0f) + 0.5f;
+	nz.y = (nz.y/4.0f) + 0.5f;
 
-	float nx   = -dzdx/dx;
-	float ny   = -dzdy/dy;
-
-	// clamp nx and ny to (-2.0, 2.0)
-	if(nx < -2.0f) { nx = -2.0f; }
-	if(nx >  2.0f) { nx =  2.0f; }
-	if(ny < -2.0f) { ny = -2.0f; }
-	if(ny >  2.0f) { ny =  2.0f; }
-
-	// scale nx and ny to (0.0, 1.0)
-	nx = (nx/4.0f) + 0.5f;
-	ny = (ny/4.0f) + 0.5f;
-
-	// scale nx and ny to (0, 255)
-	unsigned char inx = (unsigned char) (nx*255.0f);
-	unsigned char iny = (unsigned char) (ny*255.0f);
-
-	// store nx and ny
-	*pnx = inx;
-	*pny = iny;
+	// scale nz.x and nz.y to (0, 255)
+	*pnx = (unsigned char) (nz.x*255.0f);
+	*pny = (unsigned char) (nz.y*255.0f);
 }
 
 /***********************************************************
@@ -874,23 +787,23 @@ void terrain_tile_getNormalMap(terrain_tile_t* self,
 	ASSERT(self);
 	ASSERT(data);
 
-	// compute dx and dy of mask
+	// compute coordinates of neighboring points
+	float  x0;
+	float  y0;
+	float  x1;
+	float  y1;
 	double lat0;
 	double lon0;
 	double lat1;
 	double lon1;
 	terrain_tile_coord(self, 0, 0, &lat0, &lon0);
-	terrain_tile_coord(self, 2, 2, &lat1, &lon1);
-
-	float  x0;
-	float  y0;
-	float  x1;
-	float  y1;
+	terrain_tile_coord(self, 1, 1, &lat1, &lon1);
 	terrain_coord2xy(lat0, lon0, &x0, &y0);
 	terrain_coord2xy(lat1, lon1, &x1, &y1);
 
+	// compute dx and dy in meters
 	float dx = x1 - x0;
-	float dy = y1 - y0;
+	float dy = y0 - y1;
 
 	// compute normal map
 	int i;
