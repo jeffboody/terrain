@@ -1,5 +1,5 @@
 TARGET   = libterrain.a
-CLASSES  = terrain_tile terrain_util
+CLASSES  = terrain_tile terrain_util terrain_solar
 SOURCE   = $(CLASSES:%=%.c)
 OBJECTS  = $(SOURCE:.c=.o)
 HFILES   = $(CLASSES:%=%.h)
