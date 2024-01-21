@@ -25,6 +25,7 @@
 #include <stdlib.h>
 
 #define LOG_TAG "terrain"
+#include "../libcc/math/cc_vec3d.h"
 #include "../libcc/math/cc_mat3f.h"
 #include "../libcc/cc_log.h"
 #include "terrain_solar.h"
@@ -285,13 +286,13 @@ void terrain_solar_sunAbsolute(double lat_ss,
 {
 	ASSERT(sun);
 
-	double sunx;
-	double suny;
-	double sunz;
+	cc_vec3d_t v;
 	terrain_geo2xyz(lat_ss, lon_ss, 0.0f,
-	                &sunx, &suny, &sunz);
-	cc_vec3f_load(sun, sunx, suny, sunz);
-	cc_vec3f_normalize(sun);
+	                &v.x, &v.y, &v.z);
+	cc_vec3d_normalize(&v);
+	sun->x = (float) v.x;
+	sun->y = (float) v.y;
+	sun->z = (float) v.z;
 }
 
 void terrain_solar_sunRelative(double lat, double lon,
@@ -305,34 +306,30 @@ void terrain_solar_sunRelative(double lat, double lon,
 	terrain_solar_sunAbsolute(lat_ss, lon_ss, sun);
 
 	// compute orthornormal basis vectors
-	cc_vec3f_t x3;
-	cc_vec3f_t y3;
-	cc_vec3f_t z3;
-	double     z3x;
-	double     z3y;
-	double     z3z;
-	cc_vec3f_t north3 = { .x=0.0f, .y=0.0f, .z=1.0f };
+	cc_vec3d_t x3;
+	cc_vec3d_t y3;
+	cc_vec3d_t z3;
+	cc_vec3d_t north3 = { .x=0.0, .y=0.0, .z=1.0 };
 	terrain_geo2xyz(lat, lon, 0.0f,
-	                &z3x, &z3y, &z3z);
-	cc_vec3f_load(&z3, z3x, z3y, z3z);
-	cc_vec3f_normalize(&z3);
-	cc_vec3f_cross_copy(&north3, &z3, &x3);
-	cc_vec3f_normalize(&x3);
-	cc_vec3f_cross_copy(&z3, &x3, &y3);
-	cc_vec3f_normalize(&y3);
+	                &z3.x, &z3.y, &z3.z);
+	cc_vec3d_normalize(&z3);
+	cc_vec3d_cross_copy(&north3, &z3, &x3);
+	cc_vec3d_normalize(&x3);
+	cc_vec3d_cross_copy(&z3, &x3, &y3);
+	cc_vec3d_normalize(&y3);
 
 	// basis rotation
 	cc_mat3f_t R =
 	{
-		.m00 = x3.x,
-		.m01 = y3.x,
-		.m02 = z3.x,
-		.m10 = x3.y,
-		.m11 = y3.y,
-		.m12 = z3.y,
-		.m20 = x3.z,
-		.m21 = y3.z,
-		.m22 = z3.z,
+		.m00 = (float) x3.x,
+		.m01 = (float) y3.x,
+		.m02 = (float) z3.x,
+		.m10 = (float) x3.y,
+		.m11 = (float) y3.y,
+		.m12 = (float) z3.y,
+		.m20 = (float) x3.z,
+		.m21 = (float) y3.z,
+		.m22 = (float) z3.z,
 	};
 
 	// sun relative vector
