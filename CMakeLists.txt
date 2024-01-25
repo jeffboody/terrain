@@ -8,6 +8,7 @@ add_library(terrain
             STATIC
 
             # Source
+            terrain_solar.c
             terrain_tile.c
             terrain_util.c)
 
