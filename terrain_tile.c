@@ -172,9 +172,9 @@ terrain_tile_computeNormalf(terrain_tile_t* self,
 	ASSERT(pny);
 	ASSERT(pnz);
 
-	// get height of center/north/east samples in meters
+	// get height of center/south/east samples in meters
 	float hc = terrain_ft2m(terrain_tile_get(self, i, j));
-	float hn = terrain_ft2m(terrain_tile_get(self, i - 1, j));
+	float hs = terrain_ft2m(terrain_tile_get(self, i + 1, j));
 	float he = terrain_ft2m(terrain_tile_get(self, i, j + 1));
 
 	// compute normal vector n
@@ -182,7 +182,7 @@ terrain_tile_computeNormalf(terrain_tile_t* self,
 	cc_vec3f_t ny;
 	cc_vec3f_t n;
 	cc_vec3f_load(&nx, dx, 0.0f, he - hc);
-	cc_vec3f_load(&ny, 0.0f, dy, hn - hc);
+	cc_vec3f_load(&ny, 0.0f, dy, hc - hs);
 	cc_vec3f_normalize(&nx);
 	cc_vec3f_normalize(&ny);
 	cc_vec3f_cross_copy(&nx, &ny, &n);
