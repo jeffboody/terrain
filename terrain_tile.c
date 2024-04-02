@@ -891,6 +891,40 @@ void terrain_tile_getNormalMapf(terrain_tile_t* self,
 	}
 }
 
+float* terrain_tile_sampleNormalMapf(terrain_tile_t* self,
+                                     float* data,
+                                     float u,
+                                     float v)
+{
+	ASSERT(self);
+	ASSERT(data);
+
+	// sample nearest
+	int S = TERRAIN_SAMPLES_NORMAL;
+	int i = (int) ((S - 1)*v + 0.5f);
+	int j = (int) ((S - 1)*u + 0.5f);
+
+	// clamp sample
+	if(i < 0)
+	{
+		i = 0;
+	}
+	if(j < 0)
+	{
+		j = 0;
+	}
+	if(i >= S)
+	{
+		i = S - 1;
+	}
+	if(j >= S)
+	{
+		j = S - 1;
+	}
+
+	return &data[3*(S*i + j)];
+}
+
 int terrain_tile_tl(terrain_tile_t* self)
 {
 	ASSERT(self);
