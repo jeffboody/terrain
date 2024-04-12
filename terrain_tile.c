@@ -236,6 +236,21 @@ terrain_tile_computeNormal(terrain_tile_t* self,
 	*pny = (unsigned char) (ny*255.0f);
 }
 
+static int terrain_clampi(int v, int min, int max)
+{
+	ASSERT(min < max);
+
+	if(v < min)
+	{
+		v = min;
+	}
+	else if(v > max)
+	{
+		v = max;
+	}
+	return v;
+}
+
 /***********************************************************
 * protected                                                *
 ***********************************************************/
@@ -891,38 +906,70 @@ void terrain_tile_getNormalMapf(terrain_tile_t* self,
 	}
 }
 
-float* terrain_tile_sampleNormalMapf(terrain_tile_t* self,
-                                     float* data,
-                                     float u,
-                                     float v)
+void
+terrain_tile_sampleNormalMapf(terrain_tile_t* self,
+                              float* data,
+                              float u,
+                              float v,
+                              float* normal)
 {
 	ASSERT(self);
 	ASSERT(data);
+	ASSERT((u >= 0.0f) && (u <= 1.0f));
+	ASSERT((v >= 0.0f) && (v <= 1.0f));
+	ASSERT(normal);
 
-	// sample nearest
-	int S = TERRAIN_SAMPLES_NORMAL;
-	int i = (int) ((S - 1)*v + 0.5f);
-	int j = (int) ((S - 1)*u + 0.5f);
+	// "float indices"
+	float x = u*TERRAIN_SAMPLES_NORMAL - 0.5f;
+	float y = v*TERRAIN_SAMPLES_NORMAL - 0.5f;
 
-	// clamp sample
-	if(i < 0)
+	// determine indices to sample
+	int x0 = (int) x;
+	int y0 = (int) y;
+	int x1 = x0 + 1;
+	int y1 = y0 + 1;
+
+	// clamp indices
+	x0 = terrain_clampi(x0, 0, TERRAIN_SAMPLES_NORMAL - 1);
+	y0 = terrain_clampi(y0, 0, TERRAIN_SAMPLES_NORMAL - 1);
+	x1 = terrain_clampi(x1, 0, TERRAIN_SAMPLES_NORMAL - 1);
+	y1 = terrain_clampi(y1, 0, TERRAIN_SAMPLES_NORMAL - 1);
+	if(x0 == x1)
 	{
-		i = 0;
+		x = (float) x0;
 	}
-	if(j < 0)
+	if(y0 == y1)
 	{
-		j = 0;
-	}
-	if(i >= S)
-	{
-		i = S - 1;
-	}
-	if(j >= S)
-	{
-		j = S - 1;
+		y = (float) y0;
 	}
 
-	return &data[3*(S*i + j)];
+	// compute interpolation coefficients
+	float s = x - ((float) x0);
+	float t = y - ((float) y0);
+
+	// sample interpolation values
+	int i;
+	int offset00 = 3*(y0*TERRAIN_SAMPLES_NORMAL + x0);
+	int offset01 = 3*(y1*TERRAIN_SAMPLES_NORMAL + x0);
+	int offset10 = 3*(y0*TERRAIN_SAMPLES_NORMAL + x1);
+	int offset11 = 3*(y1*TERRAIN_SAMPLES_NORMAL + x1);
+	for(i = 0; i < 3; ++i)
+	{
+		float f00 = data[offset00 + i];
+		float f01 = data[offset01 + i];
+		float f10 = data[offset10 + i];
+		float f11 = data[offset11 + i];
+
+		// interpolate x
+		float f0010 = f00 + s*(f10 - f00);
+		float f0111 = f01 + s*(f11 - f01);
+
+		// interpolate y
+		normal[i] = f0010 + t*(f0111 - f0010);
+	}
+
+	cc_vec3f_t* tmp = (cc_vec3f_t*) normal;
+	cc_vec3f_normalize(tmp);
 }
 
 int terrain_tile_tl(terrain_tile_t* self)

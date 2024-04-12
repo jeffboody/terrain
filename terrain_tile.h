@@ -139,10 +139,11 @@ void            terrain_tile_getNormalMap(terrain_tile_t* self,
                                           unsigned char* data);
 void            terrain_tile_getNormalMapf(terrain_tile_t* self,
                                            float* data);
-float*          terrain_tile_sampleNormalMapf(terrain_tile_t* self,
+void            terrain_tile_sampleNormalMapf(terrain_tile_t* self,
                                               float* data,
                                               float u,
-                                              float v);
+                                              float v,
+                                              float* normal);
 int             terrain_tile_tl(terrain_tile_t* self);
 int             terrain_tile_bl(terrain_tile_t* self);
 int             terrain_tile_tr(terrain_tile_t* self);
