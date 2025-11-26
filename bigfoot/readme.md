@@ -18,8 +18,8 @@ delta size to adjust gradually as new values are processed.
 When an abrupt change occurs, such as a cliff, the scheme
 can reset the delta size to adapt to the sudden variation.
 
-Control Scheme
---------------
+16-bit Integer Control Scheme
+-----------------------------
 
 The control scheme defines the delta size used in the
 variable-bit encoding as the number of bits required to
@@ -34,19 +34,17 @@ The control codes are defined.
 	00: Same delta size
 	01: Increment delta size
 	10: Decrement delta size
-	11xxxx:  Reset delta size (short)
-	11xxxxx: Reset delta size (int)
+	11xxxx: Reset delta size
 
 Where the binary reset size field is converted to a delta
 size.
 
-	delta_size = xxxx  + 1; // short
-	delta_size = xxxxx + 1; // int
+	delta_size = xxxx + 1;
 
 A heuristic is applied to improve the compression ratio by
 minimizing reset operations, which introduce additional
 overhead. Reset operations are costly since they require an
-extra 4-bit (short) or 5-bit (int) size field.
+extra 4-bit delta size field.
 
 The control scheme supports two special cases for
 dynamically adjusting the delta size:
@@ -85,6 +83,9 @@ of 2 bits compared to performing a reset. For sequences of
 identical values, a special case allows delta size 2 to be
 reduced to 0, ensuring optimal encoding of repeated values.
 
+Repeated Values
+---------------
+
 Bigfoot does not include a dedicated control code to
 optimize long runs of identical values unlike the
 Gorilla compression algorithm. Because Bigfoot continuously
@@ -93,7 +94,10 @@ varying height values, the encoding naturally converges to
 emitting the control code "00" without any additional
 delta bits for repeated values. As a result, adding such a
 special case would provide little extra benefit in Bigfoot
-and would exhaust the remaining control-code space.
+and would require increasing the control-code size.
+
+Initialization
+--------------
 
 The output buffer is initialized by storing the first input
 value directly, and all subsequent values are compressed
