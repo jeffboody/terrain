@@ -18,8 +18,8 @@ delta size to adjust gradually as new values are processed.
 When an abrupt change occurs, such as a cliff, the scheme
 can reset the delta size to adapt to the sudden variation.
 
-16-bit Integer Control Scheme
------------------------------
+Control Scheme
+--------------
 
 The control scheme defines the delta size used in the
 variable-bit encoding as the number of bits required to
